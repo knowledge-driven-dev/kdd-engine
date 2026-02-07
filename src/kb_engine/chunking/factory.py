@@ -2,6 +2,7 @@
 
 from kb_engine.chunking.base import BaseChunkingStrategy
 from kb_engine.chunking.config import ChunkingConfig
+from kb_engine.chunking.parsers import get_parser
 from kb_engine.chunking.strategies.default import DefaultChunkingStrategy
 from kb_engine.chunking.strategies.entity import EntityChunkingStrategy
 from kb_engine.chunking.strategies.process import ProcessChunkingStrategy
@@ -54,14 +55,15 @@ class ChunkerFactory:
 
         return self._default_strategy or DefaultChunkingStrategy(self._config)
 
-    def chunk_document(self, document: Document) -> list[Chunk]:
+    def chunk_document(self, document: Document, parser: str = "markdown") -> list[Chunk]:
         """Chunk an entire document.
 
-        Parses the document structure (headings, sections) and
+        Parses the document structure using the specified parser and
         applies appropriate strategies to each section.
         """
         all_chunks: list[Chunk] = []
-        sections = self._parse_sections(document.content)
+        parse_fn = get_parser(parser)
+        sections = parse_fn(document.content)
 
         sequence = 0
         for heading_path, content in sections:
@@ -76,52 +78,6 @@ class ChunkerFactory:
             all_chunks.extend(chunks)
 
         return all_chunks
-
-    def _parse_sections(
-        self,
-        content: str,
-    ) -> list[tuple[list[str], str]]:
-        """Parse markdown content into sections with heading paths.
-
-        Returns a list of (heading_path, section_content) tuples.
-        """
-        sections: list[tuple[list[str], str]] = []
-        current_path: list[str] = []
-        current_content: list[str] = []
-        current_levels: list[int] = []
-
-        lines = content.split("\n")
-
-        for line in lines:
-            # Check if this is a heading
-            if line.startswith("#"):
-                # Save previous section if it has content
-                section_text = "\n".join(current_content).strip()
-                if section_text:
-                    sections.append((list(current_path), section_text))
-                current_content = []
-
-                # Parse heading level and text
-                level = len(line) - len(line.lstrip("#"))
-                heading_text = line.lstrip("#").strip()
-
-                # Update heading path based on level
-                while current_levels and current_levels[-1] >= level:
-                    current_levels.pop()
-                    if current_path:
-                        current_path.pop()
-
-                current_path.append(heading_text)
-                current_levels.append(level)
-            else:
-                current_content.append(line)
-
-        # Don't forget the last section
-        section_text = "\n".join(current_content).strip()
-        if section_text:
-            sections.append((list(current_path), section_text))
-
-        return sections
 
     def get_available_chunk_types(self) -> list[ChunkType]:
         """Get list of chunk types supported by registered strategies."""

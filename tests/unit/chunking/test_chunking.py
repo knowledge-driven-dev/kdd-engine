@@ -200,3 +200,31 @@ class TestChunkerFactory:
         # Verify sequences are unique
         sequences = [c.sequence for c in chunks]
         assert len(sequences) == len(set(sequences))
+
+    def test_chunk_document_with_json_parser(self) -> None:
+        """Test chunking a JSON document."""
+        factory = ChunkerFactory()
+        doc = Document(
+            title="config",
+            content='{"database": {"host": "localhost", "port": 5432}}',
+        )
+
+        chunks = factory.chunk_document(doc, parser="json")
+
+        assert len(chunks) > 0
+        assert all(c.document_id == doc.id for c in chunks)
+
+    def test_chunk_document_with_plaintext_parser(self) -> None:
+        """Test chunking a plain text document."""
+        factory = ChunkerFactory()
+        doc = Document(
+            title="readme",
+            content="First paragraph.\n\nSecond paragraph.\n\nThird paragraph.",
+        )
+
+        chunks = factory.chunk_document(doc, parser="plaintext")
+
+        assert len(chunks) == 3
+        assert all(c.document_id == doc.id for c in chunks)
+        sequences = [c.sequence for c in chunks]
+        assert sequences == [0, 1, 2]

@@ -3,6 +3,7 @@
 from kb_engine.chunking.base import BaseChunkingStrategy
 from kb_engine.chunking.config import ChunkingConfig
 from kb_engine.chunking.factory import ChunkerFactory
+from kb_engine.chunking.parsers import get_parser
 from kb_engine.chunking.types import ChunkType
 
 __all__ = [
@@ -10,4 +11,5 @@ __all__ = [
     "ChunkType",
     "BaseChunkingStrategy",
     "ChunkerFactory",
+    "get_parser",
 ]

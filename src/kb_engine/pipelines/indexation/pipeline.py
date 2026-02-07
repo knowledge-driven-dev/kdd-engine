@@ -9,7 +9,7 @@ from kb_engine.chunking import ChunkerFactory, ChunkingConfig
 from kb_engine.core.exceptions import PipelineError
 from kb_engine.core.models.document import Document, DocumentStatus
 from kb_engine.core.models.graph import Node
-from kb_engine.core.models.repository import RepositoryConfig
+from kb_engine.core.models.repository import EXTENSION_DEFAULTS, FileTypeConfig, RepositoryConfig
 from kb_engine.embedding import EmbeddingConfig, EmbeddingProviderFactory
 from kb_engine.extraction import ExtractionConfig, ExtractionPipelineFactory
 from kb_engine.git.scanner import GitRepoScanner
@@ -62,7 +62,8 @@ class IndexationPipeline:
             document = await self._traceability.save_document(document)
 
             # 2. Chunk the document
-            chunks = self._chunker.chunk_document(document)
+            parser = document.metadata.get("_parser", "markdown")
+            chunks = self._chunker.chunk_document(document, parser=parser)
 
             # 3. Compute section anchors from heading paths
             for chunk in chunks:
@@ -134,6 +135,57 @@ class IndexationPipeline:
         await self._traceability.delete_chunks_by_document(document.id)
         return await self._traceability.delete_document(document.id)
 
+    @staticmethod
+    def _resolve_file_type_config(
+        repo_config: RepositoryConfig, relative_path: str
+    ) -> FileTypeConfig:
+        """Resolve the FileTypeConfig for a file based on its extension."""
+        ext = Path(relative_path).suffix.lower()
+        if ext in repo_config.file_type_config:
+            return repo_config.file_type_config[ext]
+        if ext in EXTENSION_DEFAULTS:
+            return EXTENSION_DEFAULTS[ext]
+        return FileTypeConfig(parser="plaintext", mime_type="text/plain")
+
+    def _build_document(
+        self,
+        scanner: GitRepoScanner,
+        repo_config: RepositoryConfig,
+        relative_path: str,
+        commit: str,
+        remote_url: str | None,
+        existing_id=None,
+        content: str | None = None,
+    ) -> Document:
+        """Build a Document from a repository file with file-type-aware parsing."""
+        if content is None:
+            content = scanner.read_file(relative_path)
+        title = Path(relative_path).stem
+        ft_config = self._resolve_file_type_config(repo_config, relative_path)
+
+        if ft_config.parser == "markdown":
+            frontmatter, body = extract_frontmatter(content)
+        else:
+            frontmatter = {}
+
+        metadata = {**frontmatter, "_parser": ft_config.parser}
+
+        return Document(
+            id=existing_id,
+            title=frontmatter.get("title", title),
+            content=content,
+            source_path=str(scanner.repo_path / relative_path),
+            external_id=f"{repo_config.name}:{relative_path}",
+            domain=frontmatter.get("domain"),
+            tags=frontmatter.get("tags", []),
+            metadata=metadata,
+            mime_type=ft_config.mime_type,
+            repo_name=repo_config.name,
+            relative_path=relative_path,
+            git_commit=commit,
+            git_remote_url=remote_url,
+        )
+
     async def index_repository(self, repo_config: RepositoryConfig) -> list[Document]:
         """Index all matching files from a Git repository."""
         scanner = GitRepoScanner(repo_config)
@@ -155,24 +207,9 @@ class IndexationPipeline:
         documents = []
         for relative_path in files:
             try:
-                content = scanner.read_file(relative_path)
-                title = Path(relative_path).stem
-                frontmatter, body = extract_frontmatter(content)
-
-                doc = Document(
-                    title=frontmatter.get("title", title),
-                    content=content,
-                    source_path=str(scanner.repo_path / relative_path),
-                    external_id=f"{repo_config.name}:{relative_path}",
-                    domain=frontmatter.get("domain"),
-                    tags=frontmatter.get("tags", []),
-                    metadata=frontmatter,
-                    repo_name=repo_config.name,
-                    relative_path=relative_path,
-                    git_commit=commit,
-                    git_remote_url=remote_url,
+                doc = self._build_document(
+                    scanner, repo_config, relative_path, commit, remote_url
                 )
-
                 doc = await self.index_document(doc)
                 documents.append(doc)
             except Exception as e:
@@ -228,22 +265,14 @@ class IndexationPipeline:
                     skipped += 1
                     continue
 
-                title = Path(relative_path).stem
-                frontmatter_data, body = extract_frontmatter(content)
-
-                doc = Document(
-                    id=existing.id if existing else None,
-                    title=frontmatter_data.get("title", title),
+                doc = self._build_document(
+                    scanner,
+                    repo_config,
+                    relative_path,
+                    current_commit,
+                    remote_url,
+                    existing_id=existing.id if existing else None,
                     content=content,
-                    source_path=str(scanner.repo_path / relative_path),
-                    external_id=external_id,
-                    domain=frontmatter_data.get("domain"),
-                    tags=frontmatter_data.get("tags", []),
-                    metadata=frontmatter_data,
-                    repo_name=repo_config.name,
-                    relative_path=relative_path,
-                    git_commit=current_commit,
-                    git_remote_url=remote_url,
                 )
 
                 if existing:

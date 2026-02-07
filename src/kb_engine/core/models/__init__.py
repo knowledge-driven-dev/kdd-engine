@@ -3,7 +3,7 @@
 from kb_engine.core.models.document import Chunk, Document
 from kb_engine.core.models.embedding import Embedding
 from kb_engine.core.models.graph import Edge, EdgeType, Node, NodeType
-from kb_engine.core.models.repository import RepositoryConfig
+from kb_engine.core.models.repository import EXTENSION_DEFAULTS, FileTypeConfig, RepositoryConfig
 from kb_engine.core.models.search import (
     DocumentReference,
     RetrievalMode,
@@ -24,4 +24,6 @@ __all__ = [
     "RetrievalResponse",
     "RetrievalMode",
     "RepositoryConfig",
+    "FileTypeConfig",
+    "EXTENSION_DEFAULTS",
 ]
