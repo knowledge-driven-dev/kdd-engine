@@ -170,8 +170,7 @@ class IndexationPipeline:
 
         metadata = {**frontmatter, "_parser": ft_config.parser}
 
-        return Document(
-            id=existing_id,
+        kwargs: dict = dict(
             title=frontmatter.get("title", title),
             content=content,
             source_path=str(scanner.repo_path / relative_path),
@@ -185,6 +184,9 @@ class IndexationPipeline:
             git_commit=commit,
             git_remote_url=remote_url,
         )
+        if existing_id is not None:
+            kwargs["id"] = existing_id
+        return Document(**kwargs)
 
     async def index_repository(self, repo_config: RepositoryConfig) -> list[Document]:
         """Index all matching files from a Git repository."""
