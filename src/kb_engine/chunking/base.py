@@ -77,20 +77,24 @@ class BaseChunkingStrategy(ChunkingStrategy, ABC):
 
         chunks = []
         current_pos = 0
+        overlap = self._config.overlap_size
 
         while current_pos < len(text):
-            # Find a good break point
             end_pos = min(current_pos + max_size, len(text))
 
             if end_pos < len(text) and self._config.preserve_sentences:
-                # Try to break at sentence boundary
+                # Only accept sentence breaks that leave room to advance past overlap
+                search_start = current_pos + overlap + 1
                 for sep in [". ", ".\n", "! ", "!\n", "? ", "?\n"]:
-                    last_sep = text.rfind(sep, current_pos, end_pos)
+                    last_sep = text.rfind(sep, search_start, end_pos)
                     if last_sep > current_pos:
                         end_pos = last_sep + len(sep)
                         break
 
             chunks.append(text[current_pos:end_pos].strip())
-            current_pos = end_pos - self._config.overlap_size
+
+            if end_pos >= len(text):
+                break
+            current_pos = end_pos - overlap
 
         return [c for c in chunks if c]
