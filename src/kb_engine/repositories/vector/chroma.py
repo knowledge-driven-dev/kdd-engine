@@ -30,9 +30,13 @@ class ChromaRepository:
     async def initialize(self) -> None:
         """Initialize ChromaDB client and collection."""
         import chromadb
+        from chromadb.config import Settings
 
         Path(self._persist_directory).mkdir(parents=True, exist_ok=True)
-        self._client = chromadb.PersistentClient(path=self._persist_directory)
+        self._client = chromadb.PersistentClient(
+            path=self._persist_directory,
+            settings=Settings(anonymized_telemetry=False),
+        )
         self._collection = self._client.get_or_create_collection(
             name=self._collection_name,
             metadata={"hnsw:space": "cosine"},
@@ -46,9 +50,13 @@ class ChromaRepository:
     def _ensure_collection(self):
         if self._collection is None:
             import chromadb
+            from chromadb.config import Settings
 
             Path(self._persist_directory).mkdir(parents=True, exist_ok=True)
-            self._client = chromadb.PersistentClient(path=self._persist_directory)
+            self._client = chromadb.PersistentClient(
+                path=self._persist_directory,
+                settings=Settings(anonymized_telemetry=False),
+            )
             self._collection = self._client.get_or_create_collection(
                 name=self._collection_name,
                 metadata={"hnsw:space": "cosine"},
