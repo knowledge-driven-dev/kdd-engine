@@ -28,7 +28,11 @@ class TestHealthEndpoints:
         response = client.get("/health/ready")
 
         assert response.status_code == 200
-        assert response.json() == {"status": "ok"}
+        data = response.json()
+        assert data["status"] == "ok"
+        # May include additional checks info
+        if "checks" in data:
+            assert all(v == "ok" for v in data["checks"].values())
 
     def test_liveness_check(self, client: TestClient) -> None:
         """Test liveness check endpoint."""

@@ -22,6 +22,7 @@ class RepositoryFactory:
         self._traceability = None
         self._vector = None
         self._graph = None
+        self._graph_strategy = None
 
     async def get_traceability_repository(self):
         """Get or create the traceability repository."""
@@ -77,13 +78,18 @@ class RepositoryFactory:
         return self._vector
 
     async def get_graph_repository(self):
-        """Get or create the graph repository (optional)."""
+        """Get or create the graph repository (optional).
+
+        For retrieval, we use SQLiteGraphRepository which stores nodes/edges
+        in SQLite. This works regardless of which extraction strategy is used
+        (smart/falkordb stores extraction results in both FalkorDB and SQLite).
+        """
         if self._graph is None:
             graph_store = self._settings.graph_store.lower()
 
             if graph_store == "none":
                 return None
-            elif graph_store == "sqlite":
+            elif graph_store in ("sqlite", "falkordb"):
                 from kb_engine.repositories.graph.sqlite import SQLiteGraphRepository
 
                 self._graph = SQLiteGraphRepository(
@@ -105,6 +111,44 @@ class RepositoryFactory:
 
         return self._graph
 
+    async def get_graph_strategy(self):
+        """Get or create the graph extraction strategy.
+
+        Returns a GraphExtractionStrategy based on settings:
+        - "falkordb": SmartGraphExtractionStrategy (FalkorDB + KDD-aware extraction)
+        - "sqlite" | "neo4j": LegacyGraphExtractionStrategy (wraps existing repo)
+        - "none": None
+        """
+        if self._graph_strategy is not None:
+            return self._graph_strategy
+
+        graph_store = self._settings.graph_store.lower()
+
+        if graph_store == "none":
+            return None
+        elif graph_store == "falkordb":
+            from kb_engine.smart.stores.falkordb_graph import FalkorDBGraphStore
+            from kb_engine.extraction.strategies import SmartGraphExtractionStrategy
+
+            store = FalkorDBGraphStore(db_path=self._settings.falkordb_path)
+            store.initialize()
+            self._graph_strategy = SmartGraphExtractionStrategy(store)
+            logger.info("Graph strategy created", strategy="smart", store="falkordb")
+        elif graph_store in ("sqlite", "neo4j"):
+            from kb_engine.extraction.strategies import LegacyGraphExtractionStrategy
+            from kb_engine.extraction import ExtractionConfig, ExtractionPipelineFactory
+
+            graph_repo = await self.get_graph_repository()
+            extraction_pipeline = ExtractionPipelineFactory(ExtractionConfig()).create_pipeline()
+            self._graph_strategy = LegacyGraphExtractionStrategy(
+                graph_repo, extraction_pipeline
+            )
+            logger.info("Graph strategy created", strategy="legacy", store=graph_store)
+        else:
+            raise ValueError(f"Unknown graph store: {graph_store}")
+
+        return self._graph_strategy
+
     async def close(self) -> None:
         """Close all repository connections."""
         if hasattr(self._traceability, "close"):
@@ -114,3 +158,4 @@ class RepositoryFactory:
         self._traceability = None
         self._vector = None
         self._graph = None
+        self._graph_strategy = None

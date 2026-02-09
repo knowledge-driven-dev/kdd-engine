@@ -33,6 +33,7 @@ async def _create_services(settings=None):
     factory = RepositoryFactory(settings)
     traceability = await factory.get_traceability_repository()
     vector = await factory.get_vector_repository()
+    graph_strategy = await factory.get_graph_strategy()
     graph = await factory.get_graph_repository()
 
     embedding_config = EmbeddingConfig(
@@ -44,7 +45,7 @@ async def _create_services(settings=None):
     indexing_pipeline = IndexationPipeline(
         traceability_repo=traceability,
         vector_repo=vector,
-        graph_repo=graph,
+        graph_strategy=graph_strategy,
         embedding_config=embedding_config,
     )
     retrieval_pipeline = RetrievalPipeline(
@@ -113,11 +114,23 @@ def index(repo_path: str, name: str | None, pattern: tuple[str, ...], exclude: t
 @click.argument("query")
 @click.option("--limit", "-l", default=5, help="Max results")
 @click.option("--threshold", "-t", type=float, default=None, help="Min score threshold")
-def search(query: str, limit: int, threshold: float | None) -> None:
+@click.option("--json", "output_json", is_flag=True, help="Output results as JSON")
+@click.option("--mode", "-m", type=click.Choice(["vector", "graph", "hybrid"]), default="vector", help="Retrieval mode")
+def search(query: str, limit: int, threshold: float | None, output_json: bool, mode: str) -> None:
     """Search the knowledge base.
 
     Returns document references with URLs pointing to exact sections.
     """
+    import json
+
+    from kb_engine.core.models.search import RetrievalMode
+
+    mode_map = {
+        "vector": RetrievalMode.VECTOR,
+        "graph": RetrievalMode.GRAPH,
+        "hybrid": RetrievalMode.HYBRID,
+    }
+
     async def _search():
         _, retrieval_service, factory = await _create_services()
         try:
@@ -125,20 +138,57 @@ def search(query: str, limit: int, threshold: float | None) -> None:
                 query=query,
                 limit=limit,
                 score_threshold=threshold,
+                mode=mode_map[mode],
             )
 
+            if output_json:
+                # JSON output for agents
+                output = {
+                    "query": response.query,
+                    "total_count": response.total_count,
+                    "processing_time_ms": response.processing_time_ms,
+                    "references": [
+                        {
+                            "url": ref.url,
+                            "document_path": ref.document_path,
+                            "title": ref.title,
+                            "section_title": ref.section_title,
+                            "section_anchor": ref.section_anchor,
+                            "score": ref.score,
+                            "snippet": ref.snippet,
+                            "domain": ref.domain,
+                            "tags": ref.tags,
+                            "chunk_type": ref.chunk_type,
+                            "retrieval_mode": ref.retrieval_mode.value,
+                            "metadata": ref.metadata,
+                        }
+                        for ref in response.references
+                    ],
+                }
+                click.echo(json.dumps(output, indent=2, ensure_ascii=False))
+                return
+
+            # Human-readable output
             if not response.references:
                 click.echo("No results found.")
                 return
 
             click.echo(f"Found {response.total_count} results ({response.processing_time_ms:.0f}ms):\n")
             for i, ref in enumerate(response.references, 1):
-                click.echo(f"  {i}. [{ref.score:.3f}] {ref.url}")
+                mode_indicator = f"[{ref.retrieval_mode.value}]" if ref.retrieval_mode.value != "vector" else ""
+                click.echo(f"  {i}. [{ref.score:.3f}] {mode_indicator} {ref.url}")
+                if ref.title:
+                    click.echo(f"     Title: {ref.title}")
                 if ref.section_title:
                     click.echo(f"     Section: {ref.section_title}")
                 if ref.snippet:
                     snippet = ref.snippet[:120] + "..." if len(ref.snippet) > 120 else ref.snippet
                     click.echo(f"     {snippet}")
+                # Show graph relationships if present
+                if ref.metadata.get("graph_relationships"):
+                    rels = ref.metadata["graph_relationships"]
+                    rel_strs = [f"{r['type']}→{r['related_node']}" for r in rels[:3]]
+                    click.echo(f"     Relations: {', '.join(rel_strs)}")
                 click.echo()
         finally:
             await factory.close()
