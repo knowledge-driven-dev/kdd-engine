@@ -75,6 +75,9 @@ pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
+El primer `kb index` descargará el modelo de embeddings (`paraphrase-multilingual-MiniLM-L12-v2`, ~120MB).
+Los datos locales se almacenan en `~/.kb-engine/` (SQLite, ChromaDB, FalkorDB).
+
 ### Instalación (Modo Servidor)
 
 ```bash
@@ -89,8 +92,21 @@ cp .env.example .env
 docker compose -f docker/docker-compose.yml up -d
 
 # Ejecutar migraciones
-alembic upgrade head
+alembic -c migrations/alembic.ini upgrade head
 ```
+
+### Instalación MCP (para agentes)
+
+```bash
+# Instalar con dependencias MCP
+pip install -e ".[mcp]"
+
+# Iniciar servidor MCP
+kb-mcp
+```
+
+El servidor MCP expone las herramientas `kdd_search`, `kdd_related` y `kdd_list` para
+que agentes de IA consulten la base de conocimiento.
 
 ### Uso (CLI)
 
@@ -101,11 +117,14 @@ kb index ./docs/domain/
 # Buscar
 kb search "¿cómo se registra un usuario?"
 
-# Ver estado
+# Buscar en modo híbrido (vectores + grafo)
+kb search "registro de usuario" --mode hybrid
+
+# Ver estado del índice
 kb status
 
-# Sincronizar con servidor
-kb sync --remote https://kb.example.com
+# Sincronizar incrementalmente (solo archivos cambiados desde un commit)
+kb sync --since abc1234
 ```
 
 ### Administración del grafo (`kb graph`)
@@ -225,19 +244,28 @@ pytest tests/ --cov=kb_engine
 
 ## Configuración
 
-Variables de entorno (`.env`):
+Variables de entorno (`.env`). Ver `.env.example` para la lista completa.
 
 ```bash
-# Modo local (por defecto)
-KB_PROFILE=local
+# --- Perfil ---
+KB_PROFILE=local          # "local" (defecto) o "server"
 
-# Modo servidor
-KB_PROFILE=server
-DATABASE_URL=postgresql://...
+# --- Rutas locales (perfil local) ---
+SQLITE_PATH=~/.kb-engine/kb.db
+CHROMA_PATH=~/.kb-engine/chroma
+FALKORDB_PATH=~/.kb-engine/graph.db
+
+# --- Embeddings ---
+EMBEDDING_PROVIDER=local  # "local" (sentence-transformers) o "openai"
+LOCAL_EMBEDDING_MODEL=paraphrase-multilingual-MiniLM-L12-v2
+OPENAI_API_KEY=sk-...     # solo si EMBEDDING_PROVIDER=openai
+
+# --- Perfil servidor ---
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/kb_engine
 QDRANT_HOST=localhost
 QDRANT_PORT=6333
 NEO4J_URI=bolt://localhost:7687
-OPENAI_API_KEY=sk-...
+NEO4J_PASSWORD=changeme
 ```
 
 ## Roadmap
