@@ -112,7 +112,7 @@ def index(repo_path: str, name: str | None, pattern: tuple[str, ...], exclude: t
 
 @cli.command()
 @click.argument("query")
-@click.option("--limit", "-l", default=5, help="Max results")
+@click.option("--limit", "-l", default=10, help="Max results")
 @click.option("--threshold", "-t", type=float, default=None, help="Min score threshold")
 @click.option("--json", "output_json", is_flag=True, help="Output results as JSON")
 @click.option("--mode", "-m", type=click.Choice(["vector", "graph", "hybrid"]), default="vector", help="Retrieval mode")
