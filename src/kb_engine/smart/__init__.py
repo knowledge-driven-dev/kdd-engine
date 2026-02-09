@@ -13,7 +13,7 @@ from kb_engine.smart.extraction import EntityGraphExtractor
 from kb_engine.smart.parsers import DocumentKindDetector, EntityParser
 from kb_engine.smart.pipelines import EntityIngestionPipeline
 from kb_engine.smart.schemas import ENTITY_SCHEMA
-from kb_engine.smart.stores import FalkorDBGraphStore, KuzuGraphStore
+from kb_engine.smart.stores import FalkorDBGraphStore
 from kb_engine.smart.types import (
     ContextualizedChunk,
     ExtractedEntityInfo,
@@ -40,7 +40,6 @@ __all__ = [
     "MockSummaryService",
     # Stores
     "FalkorDBGraphStore",
-    "KuzuGraphStore",  # deprecated alias for FalkorDBGraphStore
     # Extraction
     "EntityGraphExtractor",
     # Pipelines

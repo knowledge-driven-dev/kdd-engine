@@ -16,17 +16,26 @@ from kb_engine.smart import (
 # Test fixtures
 FIXTURE_PATH = Path(__file__).parent.parent / "fixtures" / "entities" / "Usuario.md"
 TEST_GRAPH_PATH = Path("/tmp/kb-engine-test-graph.db")
+TEST_PROVENANCE_GRAPH_PATH = Path("/tmp/kb-engine-test-provenance-graph.db")
+
+
+def _cleanup_db(path: Path) -> None:
+    """Remove a FalkorDB database file and its settings file."""
+    if path.exists():
+        path.unlink()
+    settings = Path(str(path) + ".settings")
+    if settings.exists():
+        settings.unlink()
 
 
 @pytest.fixture(autouse=True)
 def cleanup_graph():
     """Clean up test graph before and after tests."""
-    def _cleanup():
-        if TEST_GRAPH_PATH.exists():
-            TEST_GRAPH_PATH.unlink()
-    _cleanup()
+    _cleanup_db(TEST_GRAPH_PATH)
+    _cleanup_db(TEST_PROVENANCE_GRAPH_PATH)
     yield
-    _cleanup()
+    _cleanup_db(TEST_GRAPH_PATH)
+    _cleanup_db(TEST_PROVENANCE_GRAPH_PATH)
 
 
 class TestDocumentKindDetector:
@@ -170,7 +179,7 @@ class TestEntityIngestionPipeline:
 
     @pytest.mark.asyncio
     async def test_ingest_entity_document_with_graph(self):
-        """Should ingest entity document and store to Kuzu graph."""
+        """Should ingest entity document and store to FalkorDB graph."""
         content = FIXTURE_PATH.read_text()
 
         pipeline = EntityIngestionPipeline(
@@ -228,14 +237,13 @@ El usuario inicia sesión.
         assert "Expected entity document" in result.validation_errors[0]
 
 
-@pytest.mark.skip(reason="Needs update for new FalkorDB schema")
 class TestGraphProvenance:
     """Tests for graph-native provenance with Document nodes and EXTRACTED_FROM edges."""
 
     def test_provenance_extracted_from_edges(self):
         """Indexing a document should create EXTRACTED_FROM edges to a Document node."""
-        store = FalkorDBGraphStore(TEST_GRAPH_PATH)
-        store.initialize()
+        store = FalkorDBGraphStore(TEST_PROVENANCE_GRAPH_PATH)
+        store.initialize(reset=True)
 
         # Create a document and entity with provenance
         store.upsert_document("doc-1", "User", "entities/User.md", "entity")
@@ -261,8 +269,8 @@ class TestGraphProvenance:
 
     def test_multi_document_provenance(self):
         """Two documents sharing an entity should both have EXTRACTED_FROM edges."""
-        store = FalkorDBGraphStore(TEST_GRAPH_PATH)
-        store.initialize()
+        store = FalkorDBGraphStore(TEST_PROVENANCE_GRAPH_PATH)
+        store.initialize(reset=True)
 
         # Doc A defines Entity X, references Entity Y
         store.upsert_document("doc-A", "Entity X", "x.md", "entity")
@@ -294,8 +302,8 @@ class TestGraphProvenance:
 
     def test_delete_preserves_shared_entities(self):
         """Deleting one document should preserve entities shared with another."""
-        store = FalkorDBGraphStore(TEST_GRAPH_PATH)
-        store.initialize()
+        store = FalkorDBGraphStore(TEST_PROVENANCE_GRAPH_PATH)
+        store.initialize(reset=True)
 
         # Two docs both contribute to entity:Shared
         store.upsert_document("doc-1", "Doc 1", "d1.md", "entity")
@@ -342,8 +350,8 @@ class TestGraphProvenance:
 
     def test_confidence_guard(self):
         """Upserting with lower confidence should not overwrite higher-confidence data."""
-        store = FalkorDBGraphStore(TEST_GRAPH_PATH)
-        store.initialize()
+        store = FalkorDBGraphStore(TEST_PROVENANCE_GRAPH_PATH)
+        store.initialize(reset=True)
 
         # First upsert with high confidence
         store.upsert_entity(
@@ -368,8 +376,8 @@ class TestGraphProvenance:
 
     def test_confidence_guard_allows_equal_or_higher(self):
         """Upserting with equal or higher confidence should overwrite."""
-        store = FalkorDBGraphStore(TEST_GRAPH_PATH)
-        store.initialize()
+        store = FalkorDBGraphStore(TEST_PROVENANCE_GRAPH_PATH)
+        store.initialize(reset=True)
 
         store.upsert_entity("entity:G", "Original", "Original desc", confidence=0.7)
         store.upsert_entity("entity:G", "Updated", "Updated desc", confidence=1.0)
@@ -384,8 +392,8 @@ class TestGraphProvenance:
 
     def test_get_document_impact(self):
         """get_document_impact should return all nodes extracted from a document."""
-        store = FalkorDBGraphStore(TEST_GRAPH_PATH)
-        store.initialize()
+        store = FalkorDBGraphStore(TEST_PROVENANCE_GRAPH_PATH)
+        store.initialize(reset=True)
 
         store.upsert_document("doc-impact", "Impact Doc", "impact.md", "entity")
         store.upsert_entity("entity:A", "A", "Entity A", confidence=1.0)
@@ -404,8 +412,8 @@ class TestGraphProvenance:
 
     def test_get_node_provenance(self):
         """get_node_provenance should return all documents that contributed to a node."""
-        store = FalkorDBGraphStore(TEST_GRAPH_PATH)
-        store.initialize()
+        store = FalkorDBGraphStore(TEST_PROVENANCE_GRAPH_PATH)
+        store.initialize(reset=True)
 
         store.upsert_document("doc-p1", "Doc P1", "p1.md", "entity")
         store.upsert_document("doc-p2", "Doc P2", "p2.md", "entity")
@@ -425,8 +433,8 @@ class TestGraphProvenance:
 
     def test_get_stats_includes_document_count(self):
         """get_stats should include document_count."""
-        store = FalkorDBGraphStore(TEST_GRAPH_PATH)
-        store.initialize()
+        store = FalkorDBGraphStore(TEST_PROVENANCE_GRAPH_PATH)
+        store.initialize(reset=True)
 
         store.upsert_document("doc-s1", "Stats Doc", "s1.md", "entity")
         store.upsert_entity("entity:S", "S", "Stats entity", confidence=1.0)
@@ -444,7 +452,7 @@ class TestGraphProvenance:
         content = FIXTURE_PATH.read_text()
 
         pipeline = EntityIngestionPipeline(
-            graph_path=TEST_GRAPH_PATH,
+            graph_path=TEST_PROVENANCE_GRAPH_PATH,
             use_mock_summarizer=True,
         )
 
@@ -507,7 +515,7 @@ async def main():
 
     # Query graph
     print("\n" + "-" * 60)
-    print("Querying Kuzu Graph")
+    print("Querying FalkorDB Graph")
     print("-" * 60)
 
     print("\nEntities:")

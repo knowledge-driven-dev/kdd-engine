@@ -21,7 +21,7 @@ class FalkorDBGraphStore:
     - Domain relationships (CONTAINS, REFERENCES, PRODUCES, CONSUMES)
 
     FalkorDB is schema-less and supports full MERGE...ON CREATE SET...ON MATCH SET syntax,
-    making upserts much simpler than Kuzu.
+    making upserts straightforward.
 
     Usage:
         store = FalkorDBGraphStore("./kb-graph.db")
