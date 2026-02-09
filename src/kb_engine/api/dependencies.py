@@ -46,7 +46,7 @@ async def _create_indexing_service(settings: Settings) -> IndexingService:
     factory = RepositoryFactory(settings)
     traceability = await factory.get_traceability_repository()
     vector = await factory.get_vector_repository()
-    graph = await factory.get_graph_repository()
+    graph_strategy = await factory.get_graph_strategy()
 
     embedding_config = EmbeddingConfig(
         provider=settings.embedding_provider,
@@ -57,7 +57,7 @@ async def _create_indexing_service(settings: Settings) -> IndexingService:
     pipeline = IndexationPipeline(
         traceability_repo=traceability,
         vector_repo=vector,
-        graph_repo=graph,
+        graph_strategy=graph_strategy,
         embedding_config=embedding_config,
     )
 

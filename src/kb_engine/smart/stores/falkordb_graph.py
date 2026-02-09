@@ -13,10 +13,12 @@ class FalkorDBGraphStore:
     """Graph store backed by FalkorDB (FalkorDBLite) embedded database.
 
     Provides storage for:
+    - Document nodes (provenance tracking)
     - Entity nodes (domain entities)
     - Concept nodes (attributes, states)
     - Event nodes (domain events)
-    - Relationships between nodes
+    - EXTRACTED_FROM relationships (node-to-document provenance)
+    - Domain relationships (CONTAINS, REFERENCES, PRODUCES, CONSUMES)
 
     FalkorDB is schema-less and supports full MERGE...ON CREATE SET...ON MATCH SET syntax,
     making upserts much simpler than Kuzu.
@@ -25,17 +27,15 @@ class FalkorDBGraphStore:
         store = FalkorDBGraphStore("./kb-graph.db")
         store.initialize()
 
+        # Add document provenance
+        store.upsert_document("doc-1", "User Entity", "entities/User.md", "entity")
+
         # Add nodes
-        store.upsert_entity("Usuario", {"code_class": "User"})
-        store.upsert_concept("Usuario.email", "attribute", {"type": "string"})
+        store.upsert_entity("entity:User", "User", "Domain user")
+        store.add_extracted_from("entity:User", "Entity", "doc-1", "primary", 1.0)
 
-        # Add relationships
-        store.add_relationship("Usuario", "Usuario.email", "CONTAINS")
-
-        # Query
-        results = store.execute_cypher(
-            "MATCH (e:Entity)-[:CONTAINS]->(c:Concept) RETURN e.name, c.name"
-        )
+        # Query provenance
+        impact = store.get_document_impact("doc-1")
     """
 
     def __init__(self, db_path: str | Path) -> None:
@@ -84,21 +84,11 @@ class FalkorDBGraphStore:
         log = logger.bind(db_path=str(self.db_path))
         log.debug("falkordb.indexes.create")
 
-        # Create indexes on id property for each node type
-        try:
-            self._graph.query("CREATE INDEX FOR (e:Entity) ON (e.id)")
-        except Exception:
-            pass  # Index may already exist
-
-        try:
-            self._graph.query("CREATE INDEX FOR (c:Concept) ON (c.id)")
-        except Exception:
-            pass
-
-        try:
-            self._graph.query("CREATE INDEX FOR (ev:Event) ON (ev.id)")
-        except Exception:
-            pass
+        for label in ["Entity", "Concept", "Event", "Document"]:
+            try:
+                self._graph.query(f"CREATE INDEX FOR (n:{label}) ON (n.id)")
+            except Exception:
+                pass  # Index may already exist
 
         log.debug("falkordb.indexes.created")
 
@@ -116,6 +106,86 @@ class FalkorDBGraphStore:
         self._graph = None
         self._db = None
 
+    # === Document Node Operations ===
+
+    def upsert_document(
+        self,
+        doc_id: str,
+        title: str,
+        path: str = "",
+        kind: str = "",
+    ) -> None:
+        """Insert or update a Document node for provenance tracking.
+
+        Args:
+            doc_id: Unique document identifier.
+            title: Document title.
+            path: File path or URL of the document.
+            kind: Document kind (entity, use-case, etc.).
+        """
+        log = logger.bind(doc_id=doc_id, title=title)
+        params = {
+            "id": doc_id,
+            "title": title,
+            "path": path,
+            "kind": kind,
+        }
+
+        try:
+            self.graph.query(
+                """
+                MERGE (d:Document {id: $id})
+                ON CREATE SET d.title = $title, d.path = $path, d.kind = $kind
+                ON MATCH SET d.title = $title, d.path = $path, d.kind = $kind
+                """,
+                params=params,
+            )
+            log.debug("falkordb.document.upserted")
+        except Exception as e:
+            log.warning("falkordb.document.upsert_failed", error=str(e))
+            raise
+
+    def add_extracted_from(
+        self,
+        node_id: str,
+        node_label: str,
+        doc_id: str,
+        role: str = "primary",
+        confidence: float = 1.0,
+    ) -> None:
+        """Create EXTRACTED_FROM edge from a domain node to a Document.
+
+        Args:
+            node_id: ID of the source node (Entity, Concept, or Event).
+            node_label: Label of the source node ("Entity", "Concept", or "Event").
+            doc_id: ID of the target Document node.
+            role: Role of the extraction ("primary" or "referenced").
+            confidence: Confidence score of the extraction.
+        """
+        params = {
+            "nid": node_id,
+            "did": doc_id,
+            "role": role,
+            "conf": confidence,
+        }
+        try:
+            self.graph.query(
+                f"""
+                MATCH (n:{node_label} {{id: $nid}}), (d:Document {{id: $did}})
+                MERGE (n)-[r:EXTRACTED_FROM]->(d)
+                ON CREATE SET r.role = $role, r.confidence = $conf
+                ON MATCH SET r.role = $role, r.confidence = $conf
+                """,
+                params=params,
+            )
+        except Exception as e:
+            logger.warning(
+                "falkordb.extracted_from.failed",
+                node_id=node_id,
+                doc_id=doc_id,
+                error=str(e),
+            )
+
     # === Node Operations ===
 
     def upsert_entity(
@@ -125,10 +195,14 @@ class FalkorDBGraphStore:
         description: str = "",
         code_class: str | None = None,
         code_table: str | None = None,
-        source_doc_id: str | None = None,
         confidence: float = 1.0,
     ) -> None:
-        """Insert or update an Entity node."""
+        """Insert or update an Entity node.
+
+        Uses a confidence guard: on update, only overwrites if the new
+        confidence is >= the existing confidence. This prevents a stub
+        reference (0.7) from overwriting a fully-defined entity (1.0).
+        """
         log = logger.bind(entity_id=entity_id, name=name)
         params = {
             "id": entity_id,
@@ -136,18 +210,25 @@ class FalkorDBGraphStore:
             "descr": description[:500] if description else "",
             "code_class": code_class or "",
             "code_table": code_table or "",
-            "source_doc": source_doc_id or "",
             "confidence": confidence,
         }
 
         try:
+            # Step 1: Create if not exists
             self.graph.query(
                 """
                 MERGE (e:Entity {id: $id})
                 ON CREATE SET e.name = $name, e.description = $descr, e.code_class = $code_class,
-                    e.code_table = $code_table, e.source_doc_id = $source_doc, e.confidence = $confidence
-                ON MATCH SET e.name = $name, e.description = $descr, e.code_class = $code_class,
-                    e.code_table = $code_table, e.source_doc_id = $source_doc, e.confidence = $confidence
+                    e.code_table = $code_table, e.confidence = $confidence
+                """,
+                params=params,
+            )
+            # Step 2: Update only if new confidence >= existing
+            self.graph.query(
+                """
+                MATCH (e:Entity {id: $id}) WHERE e.confidence <= $confidence
+                SET e.name = $name, e.description = $descr, e.code_class = $code_class,
+                    e.code_table = $code_table, e.confidence = $confidence
                 """,
                 params=params,
             )
@@ -164,10 +245,13 @@ class FalkorDBGraphStore:
         description: str = "",
         parent_entity: str | None = None,
         properties: dict[str, Any] | None = None,
-        source_doc_id: str | None = None,
         confidence: float = 1.0,
     ) -> None:
-        """Insert or update a Concept node."""
+        """Insert or update a Concept node.
+
+        Uses a confidence guard: on update, only overwrites if the new
+        confidence is >= the existing confidence.
+        """
         import json
 
         log = logger.bind(concept_id=concept_id, concept_type=concept_type)
@@ -178,20 +262,25 @@ class FalkorDBGraphStore:
             "descr": description[:500] if description else "",
             "parent": parent_entity or "",
             "props": json.dumps(properties) if properties else "{}",
-            "source_doc": source_doc_id or "",
             "confidence": confidence,
         }
 
         try:
+            # Step 1: Create if not exists
             self.graph.query(
                 """
                 MERGE (c:Concept {id: $id})
                 ON CREATE SET c.name = $name, c.concept_type = $ctype, c.description = $descr,
-                    c.parent_entity = $parent, c.properties = $props,
-                    c.source_doc_id = $source_doc, c.confidence = $confidence
-                ON MATCH SET c.name = $name, c.concept_type = $ctype, c.description = $descr,
-                    c.parent_entity = $parent, c.properties = $props,
-                    c.source_doc_id = $source_doc, c.confidence = $confidence
+                    c.parent_entity = $parent, c.properties = $props, c.confidence = $confidence
+                """,
+                params=params,
+            )
+            # Step 2: Update only if new confidence >= existing
+            self.graph.query(
+                """
+                MATCH (c:Concept {id: $id}) WHERE c.confidence <= $confidence
+                SET c.name = $name, c.concept_type = $ctype, c.description = $descr,
+                    c.parent_entity = $parent, c.properties = $props, c.confidence = $confidence
                 """,
                 params=params,
             )
@@ -205,23 +294,35 @@ class FalkorDBGraphStore:
         event_id: str,
         name: str,
         description: str = "",
-        source_doc_id: str | None = None,
+        confidence: float = 1.0,
     ) -> None:
-        """Insert or update an Event node."""
+        """Insert or update an Event node.
+
+        Uses a confidence guard: on update, only overwrites if the new
+        confidence is >= the existing confidence.
+        """
         log = logger.bind(event_id=event_id, name=name)
         params = {
             "id": event_id,
             "name": name,
             "descr": description[:500] if description else "",
-            "source_doc": source_doc_id or "",
+            "confidence": confidence,
         }
 
         try:
+            # Step 1: Create if not exists
             self.graph.query(
                 """
                 MERGE (e:Event {id: $id})
-                ON CREATE SET e.name = $name, e.description = $descr, e.source_doc_id = $source_doc
-                ON MATCH SET e.name = $name, e.description = $descr, e.source_doc_id = $source_doc
+                ON CREATE SET e.name = $name, e.description = $descr, e.confidence = $confidence
+                """,
+                params=params,
+            )
+            # Step 2: Update only if new confidence >= existing
+            self.graph.query(
+                """
+                MATCH (e:Event {id: $id}) WHERE e.confidence <= $confidence
+                SET e.name = $name, e.description = $descr, e.confidence = $confidence
                 """,
                 params=params,
             )
@@ -373,19 +474,23 @@ class FalkorDBGraphStore:
         return results[0] if results else None
 
     def get_entity_graph(self, entity_id: str, depth: int = 2) -> dict:
-        """Get an entity and all related nodes up to depth."""
+        """Get an entity and all related nodes up to depth.
+
+        Filters out EXTRACTED_FROM edges to only return domain relationships.
+        """
+        # Domain relationship types only (exclude EXTRACTED_FROM)
+        domain_rels = "CONTAINS|REFERENCES|PRODUCES|CONSUMES"
         nodes = self.execute_cypher(
             f"""
-            MATCH (e:Entity {{id: $id}})-[*1..{depth}]-(n)
+            MATCH (e:Entity {{id: $id}})-[:{domain_rels}*1..{depth}]-(n)
             RETURN DISTINCT labels(n)[0] as node_type, n.id as id, n.name as name
             """,
             {"id": entity_id},
         )
 
-        # Get relationship types using type() function (FalkorDB supports this)
         edges = self.execute_cypher(
-            """
-            MATCH (e:Entity {id: $id})-[r]-()
+            f"""
+            MATCH (e:Entity {{id: $id}})-[r:{domain_rels}]-()
             RETURN DISTINCT type(r) as rel_type
             """,
             {"id": entity_id},
@@ -419,14 +524,71 @@ class FalkorDBGraphStore:
             {"from": from_id, "to": to_id},
         )
 
+    # === Provenance Queries ===
+
+    def get_document_impact(self, doc_id: str) -> list[dict]:
+        """Get all nodes extracted from a given document.
+
+        Args:
+            doc_id: Document identifier.
+
+        Returns:
+            List of dicts with node_type, id, name, role, confidence.
+        """
+        return self.execute_cypher(
+            """
+            MATCH (n)-[r:EXTRACTED_FROM]->(d:Document {id: $did})
+            RETURN labels(n)[0] as node_type, n.id as id, n.name as name,
+                   r.role as role, r.confidence as confidence
+            """,
+            {"did": doc_id},
+        )
+
+    def get_node_provenance(self, node_id: str) -> list[dict]:
+        """Get all documents that contributed to a given node.
+
+        Args:
+            node_id: Node identifier.
+
+        Returns:
+            List of dicts with doc_id, title, path, role, confidence.
+        """
+        return self.execute_cypher(
+            """
+            MATCH (n {id: $nid})-[r:EXTRACTED_FROM]->(d:Document)
+            RETURN d.id as doc_id, d.title as title, d.path as path,
+                   r.role as role, r.confidence as confidence
+            """,
+            {"nid": node_id},
+        )
+
     # === Utility ===
 
     def delete_by_source_doc(self, source_doc_id: str) -> None:
-        """Delete all nodes and relationships from a source document."""
+        """Delete a document and its exclusive nodes using cascade.
+
+        Steps:
+        1. Delete EXTRACTED_FROM edges pointing to the Document
+        2. Delete domain relationships with source_doc_id = X
+        3. Delete orphan nodes (no remaining EXTRACTED_FROM to any Document)
+        4. Delete the Document node
+        """
         log = logger.bind(source_doc_id=source_doc_id)
         log.debug("falkordb.delete_by_source.start")
 
-        # Delete relationships first
+        # Step 1: Delete EXTRACTED_FROM edges to this document
+        try:
+            self.graph.query(
+                """
+                MATCH (n)-[r:EXTRACTED_FROM]->(d:Document {id: $doc_id})
+                DELETE r
+                """,
+                params={"doc_id": source_doc_id},
+            )
+        except Exception:
+            pass
+
+        # Step 2: Delete domain relationships with source_doc_id
         for rel_type in ["CONTAINS", "REFERENCES", "PRODUCES", "CONSUMES", "RELATED_TO"]:
             try:
                 self.graph.query(
@@ -440,19 +602,31 @@ class FalkorDBGraphStore:
             except Exception:
                 pass
 
-        # Delete nodes
+        # Step 3: Delete orphan nodes (no EXTRACTED_FROM to any Document)
         for node_type in ["Entity", "Concept", "Event"]:
             try:
                 self.graph.query(
                     f"""
                     MATCH (n:{node_type})
-                    WHERE n.source_doc_id = $doc_id
-                    DELETE n
+                    OPTIONAL MATCH (n)-[r:EXTRACTED_FROM]->(:Document)
+                    WITH n WHERE r IS NULL
+                    DETACH DELETE n
                     """,
-                    params={"doc_id": source_doc_id},
                 )
             except Exception:
                 pass
+
+        # Step 4: Delete the Document node
+        try:
+            self.graph.query(
+                """
+                MATCH (d:Document {id: $doc_id})
+                DETACH DELETE d
+                """,
+                params={"doc_id": source_doc_id},
+            )
+        except Exception:
+            pass
 
         log.info("falkordb.delete_by_source.complete")
 
@@ -460,7 +634,7 @@ class FalkorDBGraphStore:
         """Get database statistics."""
         stats = {}
 
-        for node_type in ["Entity", "Concept", "Event"]:
+        for node_type in ["Entity", "Concept", "Event", "Document"]:
             try:
                 result = self.execute_cypher(f"MATCH (n:{node_type}) RETURN count(n) as cnt")
                 stats[f"{node_type.lower()}_count"] = result[0]["cnt"] if result else 0

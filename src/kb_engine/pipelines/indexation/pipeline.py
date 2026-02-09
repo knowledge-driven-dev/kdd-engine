@@ -1,21 +1,30 @@
 """Main indexation pipeline."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import structlog
 
 from kb_engine.chunking import ChunkerFactory, ChunkingConfig
 from kb_engine.core.exceptions import PipelineError
 from kb_engine.core.models.document import Document, DocumentStatus
-from kb_engine.core.models.graph import Node
-from kb_engine.core.models.repository import EXTENSION_DEFAULTS, FileTypeConfig, RepositoryConfig
+from kb_engine.core.models.repository import (
+    EXTENSION_DEFAULTS,
+    FileTypeConfig,
+    RepositoryConfig,
+)
 from kb_engine.embedding import EmbeddingConfig, EmbeddingProviderFactory
 from kb_engine.extraction import ExtractionConfig, ExtractionPipelineFactory
 from kb_engine.git.scanner import GitRepoScanner
 from kb_engine.git.url_resolver import URLResolver
 from kb_engine.utils.hashing import compute_content_hash
 from kb_engine.utils.markdown import extract_frontmatter, heading_path_to_anchor
+
+if TYPE_CHECKING:
+    from kb_engine.extraction.strategies import GraphExtractionStrategy
 
 logger = structlog.get_logger(__name__)
 
@@ -37,6 +46,7 @@ class IndexationPipeline:
         traceability_repo,
         vector_repo,
         graph_repo=None,
+        graph_strategy: GraphExtractionStrategy | None = None,
         url_resolver: URLResolver | None = None,
         chunking_config: ChunkingConfig | None = None,
         embedding_config: EmbeddingConfig | None = None,
@@ -44,13 +54,24 @@ class IndexationPipeline:
     ) -> None:
         self._traceability = traceability_repo
         self._vector = vector_repo
-        self._graph = graph_repo
         self._url_resolver = url_resolver
 
         # Initialize components
         self._chunker = ChunkerFactory(chunking_config)
         self._embedding_provider = EmbeddingProviderFactory(embedding_config).create_provider()
         self._extraction_pipeline = ExtractionPipelineFactory(extraction_config).create_pipeline()
+
+        # Graph strategy: explicit strategy > legacy wrapper around graph_repo > None
+        if graph_strategy is not None:
+            self._graph_strategy = graph_strategy
+        elif graph_repo is not None:
+            from kb_engine.extraction.strategies import LegacyGraphExtractionStrategy
+
+            self._graph_strategy = LegacyGraphExtractionStrategy(
+                graph_repo, self._extraction_pipeline
+            )
+        else:
+            self._graph_strategy = None
 
     async def index_document(self, document: Document) -> Document:
         """Index a document through the full pipeline."""
@@ -84,23 +105,17 @@ class IndexationPipeline:
             logger.debug("Step 6/8: storing embeddings", count=len(embeddings))
             await self._vector.upsert_embeddings(embeddings)
 
-            # 7. Extract entities and store in graph (if graph repo available)
-            if self._graph is not None:
+            # 7. Extract entities and store in graph (if strategy available)
+            if self._graph_strategy is not None:
                 logger.debug("Step 7/8: extracting entities", title=document.title)
-                extraction_result = await self._extraction_pipeline.extract_document(
+                graph_result = await self._graph_strategy.extract_and_store(
                     document, chunks
                 )
-                for node_data in extraction_result.nodes:
-                    node = Node(
-                        name=node_data.name,
-                        node_type=node_data.node_type,
-                        description=node_data.description,
-                        source_document_id=document.id,
-                        properties=node_data.properties,
-                        confidence=node_data.confidence,
-                        extraction_method=node_data.extraction_method,
-                    )
-                    await self._graph.create_node(node)
+                logger.debug(
+                    "Step 7/8: entities extracted",
+                    nodes=graph_result.nodes_created,
+                    edges=graph_result.edges_created,
+                )
 
             # 8. Update document status
             logger.debug("Step 8/8: updating status", title=document.title)
@@ -130,16 +145,16 @@ class IndexationPipeline:
     async def reindex_document(self, document: Document) -> Document:
         """Reindex an existing document."""
         await self._vector.delete_by_document(document.id)
-        if self._graph is not None:
-            await self._graph.delete_by_document(document.id)
+        if self._graph_strategy is not None:
+            await self._graph_strategy.delete_by_document(str(document.id))
         await self._traceability.delete_chunks_by_document(document.id)
         return await self.index_document(document)
 
     async def delete_document(self, document: Document) -> bool:
         """Delete a document and all its indexed data."""
         await self._vector.delete_by_document(document.id)
-        if self._graph is not None:
-            await self._graph.delete_by_document(document.id)
+        if self._graph_strategy is not None:
+            await self._graph_strategy.delete_by_document(str(document.id))
         await self._traceability.delete_chunks_by_document(document.id)
         return await self._traceability.delete_document(document.id)
 

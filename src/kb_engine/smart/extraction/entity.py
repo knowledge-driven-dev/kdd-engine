@@ -12,11 +12,13 @@ class EntityGraphExtractor:
     """Extracts and stores entity graph data in FalkorDB.
 
     Extracts:
+    - Document node for provenance tracking
     - Main entity as Entity node
     - Attributes as Concept nodes (linked to entity via CONTAINS)
     - States as Concept nodes
     - Related entities as Entity nodes (linked via REFERENCES)
     - Events as Event nodes (linked via PRODUCES/CONSUMES)
+    - EXTRACTED_FROM edges from every domain node to the Document
     """
 
     def __init__(self, graph_store: FalkorDBGraphStore) -> None:
@@ -45,8 +47,19 @@ class EntityGraphExtractor:
         log.debug("extractor.start")
 
         doc_id = parsed.frontmatter.get("id", entity_info.name)
+        doc_path = parsed.frontmatter.get("path", "")
+        doc_kind = parsed.kind.value if hasattr(parsed.kind, "value") else ""
         nodes_created = 0
         edges_created = 0
+
+        # 0. Document node for provenance
+        self.graph_store.upsert_document(
+            doc_id=doc_id,
+            title=entity_info.name,
+            path=doc_path,
+            kind=doc_kind,
+        )
+        nodes_created += 1
 
         # 1. Main entity node
         entity_id = f"entity:{entity_info.name}"
@@ -56,10 +69,11 @@ class EntityGraphExtractor:
             description=entity_info.description[:500] if entity_info.description else "",
             code_class=entity_info.code_class,
             code_table=entity_info.code_table,
-            source_doc_id=doc_id,
             confidence=1.0,
         )
         nodes_created += 1
+        self.graph_store.add_extracted_from(entity_id, "Entity", doc_id, "primary", 1.0)
+        edges_created += 1
         log.debug("extractor.entity_created", entity_id=entity_id)
 
         # 2. Attribute nodes
@@ -77,10 +91,11 @@ class EntityGraphExtractor:
                     "is_reference": attr.is_reference,
                     "reference_entity": attr.reference_entity,
                 },
-                source_doc_id=doc_id,
                 confidence=0.95,
             )
             nodes_created += 1
+            self.graph_store.add_extracted_from(concept_id, "Concept", doc_id, "primary", 0.95)
+            edges_created += 1
 
             # CONTAINS edge
             self.graph_store.add_contains(
@@ -94,15 +109,18 @@ class EntityGraphExtractor:
             # If attribute references another entity
             if attr.is_reference and attr.reference_entity:
                 ref_entity_id = f"entity:{attr.reference_entity}"
-                # Ensure referenced entity exists
+                # Ensure referenced entity exists (stub)
                 self.graph_store.upsert_entity(
                     entity_id=ref_entity_id,
                     name=attr.reference_entity,
                     description=f"Referenced by {entity_info.name}.{attr.name}",
-                    source_doc_id=doc_id,
                     confidence=0.7,  # Lower confidence for inferred entities
                 )
                 nodes_created += 1
+                self.graph_store.add_extracted_from(
+                    ref_entity_id, "Entity", doc_id, "referenced", 0.7
+                )
+                edges_created += 1
 
                 # REFERENCES edge
                 self.graph_store.add_references(
@@ -130,10 +148,11 @@ class EntityGraphExtractor:
                     "is_final": state.is_final,
                     "entry_conditions": state.entry_conditions,
                 },
-                source_doc_id=doc_id,
                 confidence=0.95,
             )
             nodes_created += 1
+            self.graph_store.add_extracted_from(concept_id, "Concept", doc_id, "primary", 0.95)
+            edges_created += 1
 
             # CONTAINS edge
             self.graph_store.add_contains(
@@ -150,15 +169,18 @@ class EntityGraphExtractor:
         for rel in entity_info.relations:
             ref_entity_id = f"entity:{rel.target_entity}"
 
-            # Ensure referenced entity exists
+            # Ensure referenced entity exists (stub)
             self.graph_store.upsert_entity(
                 entity_id=ref_entity_id,
                 name=rel.target_entity,
                 description=f"Related to {entity_info.name} via {rel.name}",
-                source_doc_id=doc_id,
                 confidence=0.7,
             )
             nodes_created += 1
+            self.graph_store.add_extracted_from(
+                ref_entity_id, "Entity", doc_id, "referenced", 0.7
+            )
+            edges_created += 1
 
             # REFERENCES edge
             self.graph_store.add_references(
@@ -181,9 +203,11 @@ class EntityGraphExtractor:
                 event_id=event_id,
                 name=event_name,
                 description=f"Emitted by {entity_info.name}",
-                source_doc_id=doc_id,
+                confidence=0.9,
             )
             nodes_created += 1
+            self.graph_store.add_extracted_from(event_id, "Event", doc_id, "primary", 0.9)
+            edges_created += 1
 
             self.graph_store.add_produces(
                 entity_id=entity_id,
@@ -202,9 +226,11 @@ class EntityGraphExtractor:
                 event_id=event_id,
                 name=event_name,
                 description=f"Consumed by {entity_info.name}",
-                source_doc_id=doc_id,
+                confidence=0.9,
             )
             nodes_created += 1
+            self.graph_store.add_extracted_from(event_id, "Event", doc_id, "primary", 0.9)
+            edges_created += 1
 
             self.graph_store.add_consumes(
                 entity_id=entity_id,

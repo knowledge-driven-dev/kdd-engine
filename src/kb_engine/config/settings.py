@@ -56,7 +56,10 @@ class Settings(BaseSettings):
     qdrant_collection: str = "kb_engine_embeddings"
 
     # --- Graph store ---
-    graph_store: str = "sqlite"  # "sqlite" | "neo4j" | "none"
+    graph_store: str = "falkordb"  # "sqlite" | "neo4j" | "falkordb" | "none"
+
+    # FalkorDB (local profile)
+    falkordb_path: str = "~/.kb-engine/graph.db"
 
     # Neo4j (server profile)
     neo4j_uri: str = "bolt://localhost:7687"
@@ -65,7 +68,7 @@ class Settings(BaseSettings):
 
     # --- Embeddings (independent of profile) ---
     embedding_provider: str = "local"  # "local" | "openai"
-    local_embedding_model: str = "all-MiniLM-L6-v2"
+    local_embedding_model: str = "paraphrase-multilingual-MiniLM-L12-v2"
 
     # OpenAI
     openai_api_key: str | None = None
@@ -90,9 +93,42 @@ class Settings(BaseSettings):
                 f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
                 f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
             )
-        # Resolve sqlite path
+        # Resolve paths
         self.sqlite_path = str(Path(self.sqlite_path).expanduser())
         self.chroma_path = str(Path(self.chroma_path).expanduser())
+        self.falkordb_path = str(Path(self.falkordb_path).expanduser())
+        self._validate_config()
+
+    def _validate_config(self) -> None:
+        """Validate cross-field configuration."""
+        profile = self.profile.lower()
+        traceability = self.traceability_store.lower()
+        vector = self.vector_store.lower()
+        graph = self.graph_store.lower()
+
+        if profile not in {"local", "server"}:
+            raise ValueError(f"Unknown profile: {self.profile}")
+
+        if profile == "local":
+            if traceability != "sqlite":
+                raise ValueError("profile=local requires traceability_store=sqlite")
+            if vector != "chroma":
+                raise ValueError("profile=local requires vector_store=chroma")
+            if graph not in {"sqlite", "falkordb", "none"}:
+                raise ValueError("profile=local requires graph_store=sqlite|falkordb|none")
+        elif profile == "server":
+            if traceability != "postgres":
+                raise ValueError("profile=server requires traceability_store=postgres")
+            if vector != "qdrant":
+                raise ValueError("profile=server requires vector_store=qdrant")
+            if graph not in {"neo4j", "none"}:
+                raise ValueError("profile=server requires graph_store=neo4j|none")
+
+        if traceability == "postgres" and not self.database_url:
+            raise ValueError("database_url is required when traceability_store=postgres")
+
+        if self.embedding_provider.lower() == "openai" and not self.openai_api_key:
+            raise ValueError("openai_api_key is required when embedding_provider=openai")
 
     @property
     def is_production(self) -> bool:

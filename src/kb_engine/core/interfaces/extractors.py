@@ -1,9 +1,18 @@
 """Entity extractor protocol as defined in ADR-0003."""
 
+from dataclasses import dataclass
 from typing import Protocol
 
 from kb_engine.core.models.document import Chunk, Document
 from kb_engine.core.models.graph import Edge, Node
+
+
+@dataclass
+class GraphExtractionResult:
+    """Result of graph extraction strategy."""
+
+    nodes_created: int = 0
+    edges_created: int = 0
 
 
 class ExtractionResult:

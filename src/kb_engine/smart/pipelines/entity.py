@@ -153,8 +153,9 @@ class EntityIngestionPipeline:
                 states=len(entity_info.states),
             )
 
-            # Document ID
+            # Document ID and path propagation for provenance
             doc_id = parsed.frontmatter.get("id", entity_info.name)
+            parsed.frontmatter.setdefault("path", filename or "")
             result.document_id = doc_id
             log = log.bind(doc_id=doc_id)
 
@@ -185,21 +186,31 @@ class EntityIngestionPipeline:
                 )
             else:
                 # Count what would be created
+                ref_attr_count = sum(1 for a in entity_info.attributes if a.is_reference)
                 result.entities_extracted = (
+                    1 +  # Document node
                     1 +  # main entity
                     len(entity_info.attributes) +
                     len(entity_info.states) +
                     len(entity_info.relations) +
+                    ref_attr_count +  # stub entities from reference attributes
                     len(entity_info.events_emitted) +
                     len(entity_info.events_consumed)
                 )
                 result.relations_created = (
+                    1 +  # EXTRACTED_FROM for main entity
+                    len(entity_info.attributes) +  # EXTRACTED_FROM for attributes
                     len(entity_info.attributes) +  # CONTAINS for attributes
+                    len(entity_info.states) +  # EXTRACTED_FROM for states
                     len(entity_info.states) +  # CONTAINS for states
+                    len(entity_info.relations) +  # EXTRACTED_FROM for related entities
                     len(entity_info.relations) +  # REFERENCES
+                    ref_attr_count +  # EXTRACTED_FROM for ref attr stubs
+                    ref_attr_count +  # REFERENCES from attrs
+                    len(entity_info.events_emitted) +  # EXTRACTED_FROM for events emitted
                     len(entity_info.events_emitted) +  # PRODUCES
-                    len(entity_info.events_consumed) +  # CONSUMES
-                    sum(1 for a in entity_info.attributes if a.is_reference)  # REFERENCES from attrs
+                    len(entity_info.events_consumed) +  # EXTRACTED_FROM for events consumed
+                    len(entity_info.events_consumed)  # CONSUMES
                 )
                 log.debug("pipeline.step.graph.skipped")
 
