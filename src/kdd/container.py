@@ -8,13 +8,14 @@ entry points.
 from __future__ import annotations
 
 import logging
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from kdd.application.extractors.registry import ExtractorRegistry, create_default_registry
 from kdd.application.queries.index_loader import IndexLoader
 from kdd.domain.enums import IndexLevel
-from kdd.domain.ports import EmbeddingModel, EventBus, GraphStore, VectorStore
+from kdd.domain.ports import AgentClient, EmbeddingModel, EventBus, GraphStore, VectorStore
 from kdd.domain.rules import detect_index_level
 from kdd.infrastructure.artifact.filesystem import FilesystemArtifactStore
 from kdd.infrastructure.events.bus import InMemoryEventBus
@@ -37,6 +38,7 @@ class Container:
     event_bus: EventBus
     registry: ExtractorRegistry
     loader: IndexLoader
+    agent_client: AgentClient | None = None
 
     def ensure_loaded(self) -> bool:
         """Load index into memory if not already loaded."""
@@ -84,9 +86,20 @@ def create_container(
         except Exception as e:
             logger.warning("L2 not available: %s", e)
 
+    # Attempt to detect Claude CLI for L3 enrichment
+    agent_client: AgentClient | None = None
+    if shutil.which("claude"):
+        try:
+            from kdd.infrastructure.agent.claude_cli import ClaudeCliAgentClient
+
+            agent_client = ClaudeCliAgentClient()
+            logger.info("L3 available: Claude CLI detected")
+        except Exception as e:
+            logger.warning("L3 not available: %s", e)
+
     index_level = detect_index_level(
         embedding_model_available=embedding_model is not None,
-        agent_api_available=False,
+        agent_api_available=agent_client is not None,
     )
 
     loader = IndexLoader(artifact_store, graph_store, vector_store)
@@ -102,4 +115,5 @@ def create_container(
         event_bus=event_bus,
         registry=registry,
         loader=loader,
+        agent_client=agent_client,
     )

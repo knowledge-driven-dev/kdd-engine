@@ -340,6 +340,70 @@ def merge(sources: tuple, output: str, strategy: str):
 
 
 # ---------------------------------------------------------------------------
+# kdd enrich
+# ---------------------------------------------------------------------------
+
+
+@cli.command()
+@click.argument("node_id")
+@click.option("--timeout", default=120, help="Claude CLI timeout in seconds")
+@click.option("--model", default=None, help="Claude model override (e.g. sonnet)")
+@click.option("--index-path", type=click.Path(), default=None)
+@click.option("--specs-path", type=click.Path(exists=True), default=".")
+@click.option("--json-output", is_flag=True, help="Output as JSON")
+def enrich(node_id: str, timeout: int, model: str | None,
+           index_path: str | None, specs_path: str, json_output: bool):
+    """Enrich a node with AI agent analysis (CMD-003 / UC-003)."""
+    from kdd.application.commands.enrich_with_agent import enrich_with_agent
+
+    specs_root = Path(specs_path).resolve()
+    idx_path = Path(index_path) if index_path else None
+    container = create_container(specs_root, idx_path)
+
+    if not container.ensure_loaded():
+        click.echo("Error: No index found. Run 'kdd index' first.", err=True)
+        sys.exit(1)
+
+    if container.agent_client is None:
+        click.echo(
+            "Error: Claude CLI not found. Install it from "
+            "https://docs.anthropic.com/en/docs/claude-code",
+            err=True,
+        )
+        sys.exit(1)
+
+    # Apply overrides
+    if hasattr(container.agent_client, "timeout") and timeout != 120:
+        container.agent_client.timeout = timeout
+    if hasattr(container.agent_client, "model") and model:
+        container.agent_client.model = model
+
+    result = enrich_with_agent(
+        node_id,
+        artifact_store=container.artifact_store,
+        agent_client=container.agent_client,
+        specs_root=specs_root,
+    )
+
+    if not result.success:
+        click.echo(f"Error: {result.error}", err=True)
+        sys.exit(1)
+
+    if json_output:
+        click.echo(json.dumps(result.enrichment, indent=2, default=str))
+    else:
+        enrichment = result.enrichment or {}
+        click.echo(f"Enrichment for: {node_id}\n")
+        if enrichment.get("summary"):
+            click.echo(f"Summary: {enrichment['summary']}\n")
+        click.echo(f"Implicit edges added: {result.implicit_edges}")
+        impact = enrichment.get("impact_analysis", {})
+        if impact:
+            click.echo(f"Change risk: {impact.get('change_risk', 'unknown')}")
+            click.echo(f"Reason: {impact.get('reason', '')}")
+
+
+# ---------------------------------------------------------------------------
 # kdd status
 # ---------------------------------------------------------------------------
 
