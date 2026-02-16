@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from kdd.application.extractors.registry import ExtractorRegistry
+from kdd.application.extractors.registry import ExtractorRegistry, create_default_registry
 from kdd.application.queries.index_loader import IndexLoader
 from kdd.domain.enums import IndexLevel
 from kdd.domain.ports import EmbeddingModel, EventBus, GraphStore, VectorStore
@@ -62,7 +62,7 @@ def create_container(
     artifact_store = FilesystemArtifactStore(index_path)
     graph_store = NetworkXGraphStore()
     event_bus = InMemoryEventBus()
-    registry = ExtractorRegistry()
+    registry = create_default_registry()
 
     # Attempt to load embedding model and vector store
     embedding_model: EmbeddingModel | None = None
