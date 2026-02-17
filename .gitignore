@@ -97,6 +97,7 @@ docker-compose.override.yml
 Thumbs.db
 
 # Project specific
+.kdd-index/
 /data/
 /uploads/
 /exports/
