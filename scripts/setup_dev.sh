@@ -3,7 +3,7 @@
 
 set -e
 
-echo "Setting up KB-Engine development environment..."
+echo "Setting up KDD-Engine development environment..."
 
 # Check Python version
 PYTHON_VERSION=$(python3 --version 2>&1 | cut -d' ' -f2 | cut -d'.' -f1,2)

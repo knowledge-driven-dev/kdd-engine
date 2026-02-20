@@ -373,7 +373,7 @@ Combina VectorRAG y GraphRAG en paralelo, fusionando resultados.
 
 ---
 
-## 7. Recomendaciones para kb-engine
+## 7. Recomendaciones para kdd-engine
 
 ### Arquitectura Propuesta
 
@@ -387,7 +387,7 @@ Basándome en la investigación, recomiendo una arquitectura híbrida inspirada 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                     PIPELINE kb-engine                                 │
+│                     PIPELINE kdd-engine                                 │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  1. Parsing KDD    2. Chunking      3. Extracción    4. Grafo      │

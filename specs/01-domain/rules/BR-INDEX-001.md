@@ -31,7 +31,7 @@ El pipeline de indexación de un [[KDDDocument]] se ejecuta en uno de tres nivel
 
 ## Por qué existe
 
-El diseño distribuido de KB Engine requiere que la indexación funcione en cualquier máquina de desarrollo, desde laptops sin GPU hasta estaciones con acceso a APIs de IA. La degradación graceful asegura que el sistema siempre produce un índice útil.
+El diseño distribuido de KDD Engine requiere que la indexación funcione en cualquier máquina de desarrollo, desde laptops sin GPU hasta estaciones con acceso a APIs de IA. La degradación graceful asegura que el sistema siempre produce un índice útil.
 
 ## Cuándo aplica
 

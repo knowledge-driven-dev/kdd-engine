@@ -191,7 +191,7 @@ Cada kind tiene un extractor dedicado en `application/extractors/kinds/`:
 | `ui-component` | 03-experience | `UIComponent:UI-Button` |
 | `requirement` | 04-verification | `REQ:REQ-001` |
 | `objective` | 00-requirements | `OBJ:OBJ-001` |
-| `prd` | 00-requirements | `PRD:PRD-KBEngine` |
+| `prd` | 00-requirements | `PRD:PRD-KDDEngine` |
 | `adr` | 00-requirements | `ADR:ADR-0001` |
 | `glossary` | 01-domain | `Glossary:GlossaryName` |
 

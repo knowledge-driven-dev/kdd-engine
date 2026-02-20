@@ -41,7 +41,7 @@ Dado un fichero dentro de `/specs`, el sistema debe determinar el `kind` del [[K
 
 ## Por qué existe
 
-El KB Engine indexa múltiples tipos de artefactos KDD, cada uno con una estructura de secciones y campos indexables diferente. Sin un router que seleccione el extractor correcto, el sistema no puede parsear los campos específicos de cada tipo (e.g. `## Atributos` para entities vs. `## Input` para commands).
+El KDD Engine indexa múltiples tipos de artefactos KDD, cada uno con una estructura de secciones y campos indexables diferente. Sin un router que seleccione el extractor correcto, el sistema no puede parsear los campos específicos de cada tipo (e.g. `## Atributos` para entities vs. `## Input` para commands).
 
 ## Cuándo aplica
 

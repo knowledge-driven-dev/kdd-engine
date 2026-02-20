@@ -11,7 +11,7 @@ source: PRD
 
 ## Descripción
 
-El KB Engine debe cumplir los SLOs de rendimiento definidos en el PRD para garantizar que la indexación no interrumpe el flujo de trabajo del desarrollador y que el retrieval es suficientemente rápido para que los agentes de IA lo usen en tiempo real.
+El KDD Engine debe cumplir los SLOs de rendimiento definidos en el PRD para garantizar que la indexación no interrumpe el flujo de trabajo del desarrollador y que el retrieval es suficientemente rápido para que los agentes de IA lo usen en tiempo real.
 
 ## Criterios de Aceptación
 

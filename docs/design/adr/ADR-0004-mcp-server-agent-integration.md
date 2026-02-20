@@ -17,7 +17,7 @@ superseded_by: null
 
 Los agentes de codificación (Claude Code, Cursor, Windsurf) buscan información en codebases y documentación usando herramientas **sintácticas** (Grep, Glob, Read). Estas herramientas son ineficientes para búsquedas conceptuales ("cómo funciona la autenticación"), donde el agente necesita múltiples rondas de prueba y error.
 
-KB-Engine dispone de un `RetrievalPipeline` que resuelve este problema con búsqueda semántica, devolviendo `DocumentReference` con URLs directas (`file://path#anchor`). El reto es exponer esta capacidad a los agentes de forma eficiente.
+KDD-Engine dispone de un `RetrievalPipeline` que resuelve este problema con búsqueda semántica, devolviendo `DocumentReference` con URLs directas (`file://path#anchor`). El reto es exponer esta capacidad a los agentes de forma eficiente.
 
 ### Análisis de rendimiento
 
@@ -46,8 +46,8 @@ Agente (Claude Code / Cursor / Windsurf)
     │
     ▼
 ┌──────────────────────────────────────────────────┐
-│  kb-engine MCP Server                            │
-│  src/kb_engine/mcp_server.py                     │
+│  kdd-engine MCP Server                            │
+│  src/kdd_engine/mcp_server.py                     │
 │  (FastMCP, proceso persistente)                  │
 ├──────────────────────────────────────────────────┤
 │                                                  │
@@ -58,7 +58,7 @@ Agente (Claude Code / Cursor / Windsurf)
 │  Embedding model cargado en memoria (lazy init)  │
 │                                                  │
 ├──────────────────────────────────────────────────┤
-│  CLI fallback: python -m kb_engine.mcp_server    │
+│  CLI fallback: python -m kdd_engine.mcp_server    │
 │  --cli search "query"                            │
 └──────────────────────────────────────────────────┘
          │
@@ -263,10 +263,10 @@ async def kdd_list(
 ```json
 {
   "mcpServers": {
-    "kb-engine": {
+    "kdd-engine": {
       "command": "python",
-      "args": ["-m", "kb_engine.mcp_server"],
-      "cwd": "/path/to/kb-engine",
+      "args": ["-m", "kdd_engine.mcp_server"],
+      "cwd": "/path/to/kdd-engine",
       "env": {
         "KB_PROFILE": "local"
       }
@@ -277,7 +277,7 @@ async def kdd_list(
 
 **Opción 2 — Registro manual por usuario**:
 ```bash
-claude mcp add kb-engine -- python -m kb_engine.mcp_server
+claude mcp add kdd-engine -- python -m kdd_engine.mcp_server
 ```
 
 ### CLI Fallback
@@ -286,12 +286,12 @@ El mismo módulo soporta invocación directa para testing y agentes sin MCP:
 
 ```bash
 # Modo MCP (default) — proceso persistente stdio
-python -m kb_engine.mcp_server
+python -m kdd_engine.mcp_server
 
 # Modo CLI — ejecución única
-python -m kb_engine.mcp_server --cli search "how does auth work" --limit 3
-python -m kb_engine.mcp_server --cli related AuthService --depth 2
-python -m kb_engine.mcp_server --cli list --domain security
+python -m kdd_engine.mcp_server --cli search "how does auth work" --limit 3
+python -m kdd_engine.mcp_server --cli related AuthService --depth 2
+python -m kdd_engine.mcp_server --cli list --domain security
 ```
 
 La implementación interna es compartida: tanto MCP tools como CLI wrappers llaman a las mismas funciones `_do_search()`, `_do_related()`, `_do_list()`.
@@ -416,7 +416,7 @@ Solo MCP, sin fallback CLI.
 
 ## Plan de Implementación
 
-- [ ] Crear módulo `src/kb_engine/mcp_server.py` con FastMCP
+- [ ] Crear módulo `src/kdd_engine/mcp_server.py` con FastMCP
 - [ ] Implementar `kdd_search` delegando a `RetrievalService.search()`
 - [ ] Implementar `kdd_list` delegando a `TraceabilityRepository.list_documents()`
 - [ ] Implementar `kdd_related` delegando a `GraphRepository.traverse()`
@@ -424,7 +424,7 @@ Solo MCP, sin fallback CLI.
 - [ ] Añadir CLI fallback (`--cli` mode)
 - [ ] Añadir `input_examples` a cada tool
 - [ ] Crear `.mcp.json` template para registro en proyectos
-- [ ] Añadir `mcp` a dependencias opcionales (`pip install kb-engine[mcp]`)
+- [ ] Añadir `mcp` a dependencias opcionales (`pip install kdd-engine[mcp]`)
 - [ ] Tests: unitarios (mock services) + integración (MCP client → server)
 - [ ] Documentar setup en README
 

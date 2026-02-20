@@ -1,5 +1,5 @@
 ---
-id: PRD-KBEngine
+id: PRD-KDDEngine
 kind: prd
 status: draft
 owner: platform-team
@@ -16,7 +16,7 @@ release_criteria:
   - "Merge de índices de ≥2 desarrolladores sin conflictos"
 ---
 
-# KB Engine — KDD Retrieval Engine for Agents
+# KDD Engine — KDD Retrieval Engine for Agents
 
 ## Problema / Oportunidad
 
@@ -26,7 +26,7 @@ Los agentes de código (Codex, Claude Code, Cursor, etc.) necesitan contexto pre
 - **Pérdida de intención**: el "por qué" (reglas de negocio, decisiones, requisitos) se pierde o queda desconectado del "cómo" (código).
 - **Coste centralizado**: la indexación se ejecuta en servidores costosos, escalando linealmente con el tamaño del repositorio.
 
-KDD define una estructura de especificaciones rica, tipada y con relaciones explícitas. **KB Engine** es el motor de indexación y retrieval diseñado específicamente para explotar esta estructura, ofreciendo a los agentes un retrieval de alta precisión donde las specs son ciudadanos de primera clase.
+KDD define una estructura de especificaciones rica, tipada y con relaciones explícitas. **KDD Engine** es el motor de indexación y retrieval diseñado específicamente para explotar esta estructura, ofreciendo a los agentes un retrieval de alta precisión donde las specs son ciudadanos de primera clase.
 
 ## Usuarios y Jobs-to-be-done
 

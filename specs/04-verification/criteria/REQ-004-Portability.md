@@ -11,13 +11,13 @@ source: PRD
 
 ## Descripción
 
-El KB Engine no debe crear dependencia de un proveedor específico de embeddings ni de infraestructura. Los modelos de embeddings deben ser open-source y portables, y el formato de los artefactos de índice debe ser abierto y documentado.
+El KDD Engine no debe crear dependencia de un proveedor específico de embeddings ni de infraestructura. Los modelos de embeddings deben ser open-source y portables, y el formato de los artefactos de índice debe ser abierto y documentado.
 
 ## Criterios de Aceptación
 
 - **CA-1**: Los [[Embedding|embeddings]] se generan con modelos open-source portables (`nomic-embed-text`, `bge-small-en-v1.5` o equivalentes). No se requiere API de un proveedor específico para nivel L2.
 - **CA-2**: El [[IndexManifest]] registra el `embedding_model` usado, permitiendo verificar compatibilidad entre índices ([[BR-MERGE-001]]).
-- **CA-3**: El formato de `.kdd-index/` (JSON, JSONL, binario para vectores) está documentado y puede ser consumido por herramientas externas sin depender del KB Engine.
+- **CA-3**: El formato de `.kdd-index/` (JSON, JSONL, binario para vectores) está documentado y puede ser consumido por herramientas externas sin depender del KDD Engine.
 - **CA-4**: El cambio de modelo de embeddings requiere re-indexación completa pero no cambios en el código del motor.
 - **CA-5**: El graph storage puede funcionar con múltiples backends (SQLite, Neo4j, en memoria) sin cambios en la lógica de indexación o retrieval.
 

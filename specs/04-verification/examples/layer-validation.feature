@@ -20,9 +20,9 @@ Característica: Validación de dependencias de capa
     Y el edge tiene layer_violation true
 
   Escenario: SCN-LayerValidation-003 — Requirements exentos de validación
-    Dado un fichero "specs/00-requirements/PRD-KBEngine.md" que referencia "[[UC-001-IndexDocument]]"
+    Dado un fichero "specs/00-requirements/PRD-KDDEngine.md" que referencia "[[UC-001-IndexDocument]]"
     Cuando indexo el fichero
-    Entonces se genera un edge "WIKI_LINK" de "PRD:PRD-KBEngine" a "UC:UC-001"
+    Entonces se genera un edge "WIKI_LINK" de "PRD:PRD-KDDEngine" a "UC:UC-001"
     Y el edge tiene layer_violation false
 
   Escenario: SCN-LayerValidation-004 — Referencia entre misma capa es válida

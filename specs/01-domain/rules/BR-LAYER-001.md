@@ -75,7 +75,7 @@ Edge: Entity:KDDDocument (01-domain) → UC:UC-001 (02-behavior)
 
 **Referencia desde requirements (siempre válida):**
 ```
-Edge: PRD:PRD-KBEngine (00-requirements) → UC:UC-001 (02-behavior)
+Edge: PRD:PRD-KDDEngine (00-requirements) → UC:UC-001 (02-behavior)
 → layer_violation: false (00-requirements está fuera del flujo)
 ```
 

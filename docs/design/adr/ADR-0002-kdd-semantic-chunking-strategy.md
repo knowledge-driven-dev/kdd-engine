@@ -60,7 +60,7 @@ class ChunkingConfig:
 
 
 class ChunkType(str, Enum):
-    """Tipos de chunk semánticos — implementados en kb_engine.core.models.document."""
+    """Tipos de chunk semánticos — implementados en kdd_engine.core.models.document."""
     ENTITY = "entity"
     USE_CASE = "use_case"
     RULE = "rule"
@@ -667,7 +667,7 @@ Cada sección H2 es un chunk.
 
 ## Plan de Implementación
 
-- [x] Crear módulo `kb_engine.chunking`
+- [x] Crear módulo `kdd_engine.chunking`
 - [x] Implementar ChunkingStrategy base
 - [x] Implementar EntityChunkingStrategy
 - [x] Implementar UseCaseChunkingStrategy

@@ -11,7 +11,7 @@ source: PRD
 
 ## Descripción
 
-Los artefactos de índice generados por el KB Engine (`.kdd-index/`) deben ser compactos y proporcionales al tamaño de las specs originales, para que puedan versionarse en Git sin degradar la experiencia del repositorio.
+Los artefactos de índice generados por el KDD Engine (`.kdd-index/`) deben ser compactos y proporcionales al tamaño de las specs originales, para que puedan versionarse en Git sin degradar la experiencia del repositorio.
 
 ## Criterios de Aceptación
 

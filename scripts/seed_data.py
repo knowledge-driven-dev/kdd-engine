@@ -3,7 +3,7 @@
 
 import asyncio
 
-from kb_engine.core.models.document import Document
+from kdd_engine.core.models.document import Document
 
 
 SAMPLE_DOCUMENTS = [

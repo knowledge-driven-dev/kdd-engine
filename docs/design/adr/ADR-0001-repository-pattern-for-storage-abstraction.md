@@ -367,7 +367,7 @@ Usar un framework RAG donde sea posible, extender con interfaces propias.
 
 ## Plan de Implementación
 
-- [x] Crear módulo `kb_engine.repositories`
+- [x] Crear módulo `kdd_engine.repositories`
 - [x] Implementar modelos de dominio (Pydantic BaseModel)
 - [x] Definir interfaces (Protocol)
 - [x] Implementar SQLiteRepository (trazabilidad, perfil local)

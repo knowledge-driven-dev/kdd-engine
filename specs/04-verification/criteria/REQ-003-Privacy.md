@@ -11,7 +11,7 @@ source: PRD
 
 ## Descripción
 
-El KB Engine opera en modo offline-first. Las specs del desarrollador nunca salen de su máquina local a menos que el desarrollador ejecute un push explícito. Incluso durante el push, solo se transmiten los artefactos derivados (nodos, edges, embeddings), nunca el contenido original de las specs.
+El KDD Engine opera en modo offline-first. Las specs del desarrollador nunca salen de su máquina local a menos que el desarrollador ejecute un push explícito. Incluso durante el push, solo se transmiten los artefactos derivados (nodos, edges, embeddings), nunca el contenido original de las specs.
 
 ## Criterios de Aceptación
 

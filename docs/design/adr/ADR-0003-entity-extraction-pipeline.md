@@ -47,7 +47,7 @@ import yaml
 # ============================================================
 
 class NodeType(str, Enum):
-    """Tipos de nodos — implementados en kb_engine.core.models.graph."""
+    """Tipos de nodos — implementados en kdd_engine.core.models.graph."""
     ENTITY = "entity"
     USE_CASE = "use_case"
     RULE = "rule"
@@ -60,7 +60,7 @@ class NodeType(str, Enum):
 
 
 class EdgeType(str, Enum):
-    """Tipos de relaciones — implementados en kb_engine.core.models.graph."""
+    """Tipos de relaciones — implementados en kdd_engine.core.models.graph."""
     # Structural
     CONTAINS = "CONTAINS"
     PART_OF = "PART_OF"
@@ -726,7 +726,7 @@ Usar NER de spaCy para detectar entidades.
 
 ## Plan de Implementación
 
-- [x] Crear módulo `kb_engine.extraction`
+- [x] Crear módulo `kdd_engine.extraction`
 - [x] Implementar FrontmatterExtractor
 - [x] Implementar PatternExtractor
 - [x] Implementar LLMExtractor (opcional, desactivado por defecto)

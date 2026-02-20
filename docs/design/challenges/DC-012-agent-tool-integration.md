@@ -14,7 +14,7 @@ adrs: [ADR-0004]
 
 Los agentes de codificación (Claude Code, Cursor, Windsurf, etc.) buscan información en el codebase y documentación usando herramientas de búsqueda **sintáctica**: `Grep` (regex en contenido), `Glob` (patrones de ficheros), `Read` (lectura de ficheros), y `Bash` (comandos shell). Estas herramientas funcionan bien para búsquedas exactas ("encuentra la clase `AuthService`"), pero son ineficientes para búsquedas conceptuales ("cómo funciona la autenticación"), ya que el agente debe adivinar nombres de ficheros y patrones grep, a menudo realizando múltiples rondas de prueba y error.
 
-KB-Engine ya dispone de un sistema de retrieval semántico que resuelve exactamente este problema: búsqueda vectorial sobre chunks de documentación, con resolución de URLs (`DocumentReference`) que apuntan al fichero y sección exacta. El reto es **exponer esta capacidad a los agentes de IA** de la forma más eficiente y natural posible.
+KDD-Engine ya dispone de un sistema de retrieval semántico que resuelve exactamente este problema: búsqueda vectorial sobre chunks de documentación, con resolución de URLs (`DocumentReference`) que apuntan al fichero y sección exacta. El reto es **exponer esta capacidad a los agentes de IA** de la forma más eficiente y natural posible.
 
 ### Cómo buscan los agentes hoy
 
@@ -42,7 +42,7 @@ Cada tool call (sea Grep, Read, o una herramienta MCP) requiere un **pase comple
 
 Referencia: [Anthropic - Advanced Tool Use](https://www.anthropic.com/engineering/advanced-tool-use)
 
-### Capacidades existentes en kb-engine
+### Capacidades existentes en kdd-engine
 
 | Componente | Estado | Relevancia |
 |-----------|--------|------------|
@@ -147,13 +147,13 @@ Este proyecto tiene un índice semántico de documentación. Usa estos comandos 
 
 ### Opción B: MCP Server (Protocol Nativo)
 
-**Descripción**: Implementar un servidor MCP usando el Python SDK (`mcp` + `FastMCP`) que expone las capacidades de kb-engine como tools nativos del agente.
+**Descripción**: Implementar un servidor MCP usando el Python SDK (`mcp` + `FastMCP`) que expone las capacidades de kdd-engine como tools nativos del agente.
 
 ```python
-# src/kb_engine/mcp_server.py
+# src/kdd_engine/mcp_server.py
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("kb-engine")
+mcp = FastMCP("kdd-engine")
 
 @mcp.tool()
 async def kdd_search(
@@ -208,9 +208,9 @@ async def kdd_list(
 // .mcp.json (raíz del proyecto)
 {
   "mcpServers": {
-    "kb-engine": {
+    "kdd-engine": {
       "command": "python",
-      "args": ["-m", "kb_engine.mcp_server"],
+      "args": ["-m", "kdd_engine.mcp_server"],
       "env": {
         "KB_PROFILE": "local"
       }
@@ -221,7 +221,7 @@ async def kdd_list(
 
 O registro manual:
 ```bash
-claude mcp add kb-engine -- python -m kb_engine.mcp_server
+claude mcp add kdd-engine -- python -m kdd_engine.mcp_server
 ```
 
 **Pros**:
@@ -288,11 +288,11 @@ Trigger para Fase 2: cuando se observe que los agentes necesitan:
 - Integración con múltiples IDEs/agentes simultáneamente
 
 ```python
-# src/kb_engine/mcp_server.py
+# src/kdd_engine/mcp_server.py
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("kb-engine", instructions="""
-KB-Engine provides semantic search over indexed project documentation.
+mcp = FastMCP("kdd-engine", instructions="""
+KDD-Engine provides semantic search over indexed project documentation.
 Use kdd_search before falling back to Grep for conceptual queries.
 Results return file URLs - use Read to access the content.
 """)
@@ -388,12 +388,12 @@ return {"auth_docs": results, "related_entities": related}
 **Descripción**: Implementar MCP server directamente (sin fase CLI intermedia), pero asegurar que el server también sea invocable como CLI para testing y agentes sin MCP.
 
 ```python
-# src/kb_engine/mcp_server.py
+# src/kdd_engine/mcp_server.py
 # El server ES el CLI a la vez
 
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("kb-engine")
+mcp = FastMCP("kdd-engine")
 
 @mcp.tool()
 async def kdd_search(query: str, limit: int = 5, ...) -> str:

@@ -13,7 +13,7 @@ actor: AIAgent
 
 Un agente de IA (Codex, Claude Code, Cursor, etc.) solicita contexto al motor de retrieval para ejecutar una tarea de desarrollo. El sistema ejecuta una búsqueda híbrida que combina semántica, grafo y lexical, devolviendo un [[RetrievalResult]] con los [[GraphNode|nodos]] más relevantes, el subgrafo de relaciones y un control de tokens para caber en la context window del agente.
 
-Este es el **caso de uso principal** del KB Engine — el punto de entrada que los agentes usan para obtener el contexto preciso que necesitan.
+Este es el **caso de uso principal** del KDD Engine — el punto de entrada que los agentes usan para obtener el contexto preciso que necesitan.
 
 ## Actores
 

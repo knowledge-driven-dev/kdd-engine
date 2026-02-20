@@ -35,8 +35,8 @@ Sin bases de datos. Todo se persiste como ficheros JSON en `.kdd-index/`.
 ### Instalación
 
 ```bash
-git clone https://github.com/knowledge-driven-dev/kb-engine.git
-cd kb-engine
+git clone https://github.com/knowledge-driven-dev/kdd-engine.git
+cd kdd-engine
 bun install
 ```
 
@@ -99,7 +99,7 @@ Variables de entorno opcionales:
 ## Estructura del Proyecto
 
 ```
-kb-engine/
+kdd-engine/
 ├── specs/                          # 52 spec files KDD (sin cambios)
 ├── src/
 │   ├── domain/
@@ -158,7 +158,7 @@ Cada kind tiene un extractor dedicado en `src/application/extractors/kinds/`:
 | `ui-component` | 03-experience | `UIComponent:UI-Button` |
 | `requirement` | 04-verification | `REQ:REQ-001` |
 | `objective` | 00-requirements | `OBJ:OBJ-001` |
-| `prd` | 00-requirements | `PRD:PRD-KBEngine` |
+| `prd` | 00-requirements | `PRD:PRD-KDDEngine` |
 | `adr` | 00-requirements | `ADR:ADR-0001` |
 | `glossary` | 01-domain | `Glossary:GlossaryName` |
 
