@@ -1,292 +1,191 @@
-# KB-Engine
+# KDD Toolkit
 
-Sistema de retrieval de conocimiento para agentes de IA. Indexa documentación estructurada (KDD) y devuelve **referencias** a documentos relevantes, no contenido.
+Motor de indexación y retrieval para especificaciones KDD (Knowledge-Driven Development). Indexa artefactos de dominio y ofrece búsqueda híbrida (semántica + grafo + lexical) para agentes de IA.
 
 ## Concepto
 
-KB-Engine actúa como un "bibliotecario": cuando un agente pregunta algo, responde con URLs y anclas a los documentos relevantes (`file://path/to/doc.md#seccion`), permitiendo que el agente decida qué leer.
+KDD Toolkit actúa como un "bibliotecario": cuando un agente pregunta algo, responde con nodos del grafo de conocimiento y scores de relevancia, permitiendo que el agente decida qué documentos leer.
 
 ```
-┌─────────────┐     query      ┌─────────────┐     referencias     ┌─────────────┐
-│   Agente    │ ─────────────▶ │  KB-Engine  │ ──────────────────▶ │  Agente lee │
-│     IA      │                │ (retrieval) │                     │  documentos │
-└─────────────┘                └─────────────┘                     └─────────────┘
+┌─────────────┐     query      ┌─────────────┐     scored nodes     ┌─────────────┐
+│   Agente    │ ─────────────▶ │ KDD Toolkit │ ──────────────────▶  │  Agente lee │
+│     IA      │                │ (retrieval) │                      │  specs/*.md │
+└─────────────┘                └─────────────┘                      └─────────────┘
 ```
 
-## Arquitectura
+## Stack
 
-### Dual Stack
+| Componente | Tecnología |
+|------------|------------|
+| **Runtime** | Bun (TypeScript) |
+| **Grafo** | graphology (in-memory, cargado de `.kdd-index/`) |
+| **Vectores** | Brute-force cosine similarity (in-memory) |
+| **Embeddings** | `all-mpnet-base-v2` (768 dims) via `@huggingface/transformers` |
+| **CLI** | citty |
+| **MCP** | `@modelcontextprotocol/sdk` |
 
-| Componente | Local (P2P) | Servidor |
-|------------|-------------|----------|
-| **Trazabilidad** | SQLite | PostgreSQL |
-| **Vectores** | ChromaDB | Qdrant |
-| **Grafos** | FalkorDBLite | Neo4j |
-| **Embeddings** | sentence-transformers | OpenAI |
-
-### Modelo Distribuido
-
-```
-┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│  Desarrollador 1 │     │  Desarrollador 2 │     │  Desarrollador N │
-│  (indexa local)  │     │  (indexa local)  │     │  (indexa local)  │
-└────────┬─────────┘     └────────┬─────────┘     └────────┬─────────┘
-         │                        │                        │
-         └────────────────────────┼────────────────────────┘
-                                  ▼
-                         ┌──────────────────┐
-                         │  Servidor Central │
-                         │  (merge + search) │
-                         └──────────────────┘
-```
-
-Cada desarrollador indexa localmente con embeddings deterministas. El servidor central hace merge y ofrece búsqueda unificada.
-
-## Características
-
-- **Chunking semántico KDD**: Estrategias específicas para entidades, casos de uso, reglas, procesos
-- **Soporte ES/EN**: Detecta patrones en español e inglés
-- **Grafo de conocimiento**: Entidades, conceptos, eventos y sus relaciones (FalkorDB/Neo4j)
-- **Smart Ingestion**: Pipeline inteligente con detección de tipo de documento
-- **CLI**: Interfaz principal via `kb` command
+Sin bases de datos. Todo se persiste como ficheros JSON en `.kdd-index/`.
 
 ## Quick Start
 
 ### Requisitos
 
-- Python 3.11+ (recomendado 3.12)
-- (Opcional) Docker para modo servidor
+- [Bun](https://bun.sh/) v1.1+
 
-### Instalación rápida
-
-```bash
-pip install git+https://github.com/knowledge-driven-dev/kb-engine.git
-```
-
-Para actualizar a la última versión:
+### Instalación
 
 ```bash
-pip install --upgrade --force-reinstall git+https://github.com/knowledge-driven-dev/kb-engine.git
-```
-
-### Instalación para desarrollo
-
-```bash
-# Clonar
 git clone https://github.com/knowledge-driven-dev/kb-engine.git
 cd kb-engine
-
-# Crear entorno virtual con Python 3.12
-python3.12 -m venv .venv
-source .venv/bin/activate
-
-# Instalar dependencias (modo editable + herramientas de dev)
-pip install -e ".[dev]"
-
-# Verificar instalación
-pytest tests/ -v
+bun install
 ```
 
-El primer `kb index` descargará el modelo de embeddings (`paraphrase-multilingual-MiniLM-L12-v2`, ~120MB).
-Los datos locales se almacenan en `~/.kb-engine/` (SQLite, ChromaDB, FalkorDB).
-
-### Instalación (Modo Servidor)
+### Indexar
 
 ```bash
-# Instalar con dependencias de servidor
-pip install -e ".[dev,server]"
+# Indexar todas las specs (grafo + embeddings)
+bun run src/cli.ts index specs/
 
-# Copiar configuración
-cp .env.example .env
-# Editar .env con tus credenciales
-
-# Levantar servicios (PostgreSQL, Qdrant, Neo4j)
-docker compose -f docker/docker-compose.yml up -d
-
-# Ejecutar migraciones
-alembic -c migrations/alembic.ini upgrade head
+# Solo grafo (sin embeddings, más rápido)
+bun run src/cli.ts index specs/ --level L1
 ```
 
-### Instalación MCP (para agentes)
+El primer `index` con nivel L2 descargará el modelo de embeddings (`all-mpnet-base-v2`, ~440MB). Los datos se almacenan en `.kdd-index/`.
+
+### Buscar
 
 ```bash
-# Instalar con dependencias MCP
-pip install -e ".[mcp]"
+# Búsqueda híbrida (semántica + grafo + lexical)
+bun run src/cli.ts search --index-path .kdd-index "impact analysis"
 
-# Iniciar servidor MCP
-kb-mcp
+# Filtrar por kind
+bun run src/cli.ts search --index-path .kdd-index "authentication" --kind entity,command
+
+# Sin embeddings (solo grafo + lexical)
+bun run src/cli.ts search --index-path .kdd-index "pedido" --no-embeddings
 ```
 
-El servidor MCP expone las herramientas `kdd_search`, `kdd_related` y `kdd_list` para
-que agentes de IA consulten la base de conocimiento.
-
-### Uso (CLI)
+### Explorar
 
 ```bash
-# Indexar documentos
-kb index ./docs/domain/
+# Traversal del grafo desde un nodo
+bun run src/cli.ts graph --index-path .kdd-index "Entity:KDDDocument"
 
-# Buscar
-kb search "¿cómo se registra un usuario?"
+# Análisis de impacto (reverse BFS)
+bun run src/cli.ts impact --index-path .kdd-index "Entity:KDDDocument"
 
-# Buscar en modo híbrido (vectores + grafo)
-kb search "registro de usuario" --mode hybrid
+# Búsqueda semántica pura
+bun run src/cli.ts semantic --index-path .kdd-index "retrieval query"
 
-# Ver estado del índice
-kb status
+# Cobertura de gobernanza
+bun run src/cli.ts coverage --index-path .kdd-index "Entity:KDDDocument"
 
-# Sincronizar incrementalmente (solo archivos cambiados desde un commit)
-kb sync --since abc1234
+# Violaciones de dependencia entre capas
+bun run src/cli.ts violations --index-path .kdd-index
 ```
 
-### Administración del grafo (`kb graph`)
-
-Comandos para explorar, inspeccionar y administrar el grafo de conocimiento (FalkorDB).
-Todos soportan `--json` para salida estructurada.
+### MCP Server (para agentes)
 
 ```bash
-# Estadísticas del grafo
-kb graph stats
-
-# Listar nodos (opcionalmente filtrar por tipo)
-kb graph ls
-kb graph ls --type entity
-
-# Inspeccionar un nodo: vecindario + proveniencia
-kb graph inspect entity:User
-kb graph inspect entity:User -d 3    # profundidad personalizada
-
-# Verificar alcanzabilidad entre dos nodos
-kb graph path entity:User entity:Order
-kb graph path entity:User entity:Order --max-depth 3
-
-# Nodos extraídos de un documento
-kb graph impact doc-1
-
-# Documentos que contribuyeron a un nodo
-kb graph provenance entity:User
-
-# Consulta Cypher directa
-kb graph cypher "MATCH (n) RETURN labels(n)[0] as type, count(n) as cnt"
-
-# Eliminar un nodo (pide confirmación, -f para omitirla)
-kb graph delete entity:Obsolete
-kb graph delete entity:Obsolete -f
-
-# Calidad del grafo
-kb graph orphans           # entidades stub sin documento primario
-kb graph completeness      # estado de completitud por entidad
-kb graph completeness -s stub
+bun run src/mcp.ts
 ```
+
+Expone 7 tools MCP: `kdd_search`, `kdd_find_spec`, `kdd_related`, `kdd_impact`, `kdd_read_section`, `kdd_list`, `kdd_stats`.
+
+Variables de entorno opcionales:
+- `KDD_INDEX_PATH` — ruta al índice (default: `.kdd-index`)
+- `KDD_SPECS_PATH` — ruta a las specs (default: `specs`)
 
 ## Estructura del Proyecto
 
 ```
 kb-engine/
-├── src/kb_engine/
-│   ├── core/           # Modelos de dominio e interfaces
-│   ├── smart/          # Pipeline de ingesta inteligente (FalkorDB)
-│   │   ├── parsers/    # Detectores y parsers KDD
-│   │   ├── chunking/   # Chunking jerárquico con contexto
-│   │   ├── extraction/ # Extracción de entidades para grafo
-│   │   ├── stores/     # FalkorDBGraphStore
-│   │   ├── schemas/    # Esquemas de templates KDD
-│   │   └── pipelines/  # EntityIngestionPipeline
-│   ├── repositories/   # Implementaciones de storage
-│   ├── chunking/       # Estrategias de chunking clásicas
-│   ├── extraction/     # Pipeline de extracción legacy
-│   ├── embedding/      # Configuración de embeddings
-│   ├── pipelines/      # Pipelines de indexación/retrieval
-│   ├── services/       # Lógica de negocio
-│   ├── api/            # REST API (FastAPI)
-│   ├── cli.py          # Comandos CLI (Click)
-│   └── mcp_server.py   # Servidor MCP para agentes
-├── tests/
-│   ├── unit/
-│   └── integration/
-└── docs/design/        # ADRs y documentos de diseño
+├── specs/                          # 52 spec files KDD (sin cambios)
+├── src/
+│   ├── domain/
+│   │   ├── types.ts                # Enums, interfaces, modelos
+│   │   └── rules.ts                # BR-DOCUMENT-001, BR-EMBEDDING-001, BR-LAYER-001
+│   ├── application/
+│   │   ├── extractors/
+│   │   │   ├── base.ts             # Helpers: makeNodeId, buildWikiLinkEdges, etc.
+│   │   │   ├── registry.ts         # ExtractorRegistry (16 extractors)
+│   │   │   └── kinds/              # Un extractor por KDDKind
+│   │   ├── commands/
+│   │   │   └── index-document.ts   # CMD-001: read → parse → extract → embed → write
+│   │   ├── queries/
+│   │   │   ├── hybrid-search.ts    # QRY-003: semántica + grafo + lexical
+│   │   │   ├── graph-query.ts      # QRY-001: BFS traversal
+│   │   │   ├── impact-query.ts     # QRY-004: reverse BFS
+│   │   │   ├── semantic-query.ts   # QRY-002: vector puro
+│   │   │   ├── coverage-query.ts   # QRY-005: gobernanza
+│   │   │   └── violations-query.ts # QRY-006: violaciones de capa
+│   │   └── chunking.ts             # BR-EMBEDDING-001 paragraph chunking
+│   ├── infra/
+│   │   ├── artifact-loader.ts      # Lee .kdd-index/
+│   │   ├── artifact-writer.ts      # Escribe .kdd-index/
+│   │   ├── graph-store.ts          # graphology wrapper (BFS, text search)
+│   │   ├── vector-store.ts         # Brute-force cosine similarity
+│   │   ├── embedding-model.ts      # @huggingface/transformers wrapper
+│   │   ├── markdown-parser.ts      # Frontmatter + secciones
+│   │   └── wiki-links.ts           # [[Target]] extraction
+│   ├── container.ts                # DI wiring
+│   ├── cli.ts                      # CLI (7 subcommands)
+│   └── mcp.ts                      # MCP server (7 tools)
+├── tests/                          # bun:test
+├── bench/                          # Benchmarks
+├── docs/                           # ADRs y diseño
+├── package.json
+├── tsconfig.json
+└── Makefile
 ```
 
-## Documentos KDD Soportados
+## 16 KDDKind Types
 
-| Tipo | Descripción |
-|------|-------------|
-| `entity` | Entidades de dominio (Usuario, Producto, etc.) |
-| `use-case` | Casos de uso del sistema |
-| `rule` | Reglas de negocio |
-| `process` | Procesos y flujos |
-| `event` | Eventos de dominio |
-| `glossary` | Términos y definiciones |
+Cada kind tiene un extractor dedicado en `src/application/extractors/kinds/`:
 
-## API
+| Kind | Layer | Ejemplo de ID |
+|------|-------|---------------|
+| `entity` | 01-domain | `Entity:KDDDocument` |
+| `event` | 01-domain | `Event:EVT-KDDDocument-Indexed` |
+| `business-rule` | 01-domain | `BR:BR-INDEX-001` |
+| `business-policy` | 02-behavior | `BP:BP-CREDITO-001` |
+| `cross-policy` | 02-behavior | `XP:XP-CREDITOS-001` |
+| `command` | 02-behavior | `CMD:CMD-001` |
+| `query` | 02-behavior | `QRY:QRY-003` |
+| `process` | 02-behavior | `PROC:PROC-001` |
+| `use-case` | 02-behavior | `UC:UC-001` |
+| `ui-view` | 03-experience | `UIView:UI-Dashboard` |
+| `ui-component` | 03-experience | `UIComponent:UI-Button` |
+| `requirement` | 04-verification | `REQ:REQ-001` |
+| `objective` | 00-requirements | `OBJ:OBJ-001` |
+| `prd` | 00-requirements | `PRD:PRD-KBEngine` |
+| `adr` | 00-requirements | `ADR:ADR-0001` |
+| `glossary` | 01-domain | `Glossary:GlossaryName` |
 
-```bash
-# Health check
-GET /health
+## Index Levels
 
-# Búsqueda (devuelve referencias)
-POST /api/v1/retrieval/search
-{
-  "query": "registro de usuario",
-  "top_k": 5
-}
-
-# Indexar documento
-POST /api/v1/indexing/documents
-
-# Listar documentos
-GET /api/v1/indexing/documents
-```
+| Nivel | Contenido | Búsqueda |
+|-------|-----------|----------|
+| **L1** | Grafo de nodos/edges (front-matter + wiki-links) | Grafo + lexical |
+| **L2** | L1 + embeddings vectoriales (768 dims) | Híbrida (semántica + grafo + lexical) |
 
 ## Tests
 
 ```bash
-# Todos los tests
-pytest tests/ -v
-
-# Solo unitarios
-pytest tests/unit/ -v
-
-# Solo integración
-pytest tests/integration/ -v
-
-# Con coverage
-pytest tests/ --cov=kb_engine
+bun test
 ```
 
-## Configuración
-
-Variables de entorno (`.env`). Ver `.env.example` para la lista completa.
+## Makefile
 
 ```bash
-# --- Perfil ---
-KB_PROFILE=local          # "local" (defecto) o "server"
-
-# --- Rutas locales (perfil local) ---
-SQLITE_PATH=~/.kb-engine/kb.db
-CHROMA_PATH=~/.kb-engine/chroma
-FALKORDB_PATH=~/.kb-engine/graph.db
-
-# --- Embeddings ---
-EMBEDDING_PROVIDER=local  # "local" (sentence-transformers) o "openai"
-LOCAL_EMBEDDING_MODEL=paraphrase-multilingual-MiniLM-L12-v2
-OPENAI_API_KEY=sk-...     # solo si EMBEDDING_PROVIDER=openai
-
-# --- Perfil servidor ---
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/kb_engine
-QDRANT_HOST=localhost
-QDRANT_PORT=6333
-NEO4J_URI=bolt://localhost:7687
-NEO4J_PASSWORD=changeme
+make install     # bun install
+make index       # Indexar specs/
+make search q=.. # Búsqueda híbrida
+make test        # bun test
+make typecheck   # tsc --noEmit
+make mcp         # Iniciar MCP server
+make clean       # Limpiar node_modules y .kdd-index
 ```
-
-## Roadmap
-
-- [x] Stack local con SQLite + ChromaDB
-- [x] Smart ingestion pipeline con FalkorDB
-- [x] CLI completo (`kb index/search/sync/status/graph`)
-- [x] Integración MCP para agentes
-- [ ] Sincronización P2P con servidor
 
 ## Licencia
 

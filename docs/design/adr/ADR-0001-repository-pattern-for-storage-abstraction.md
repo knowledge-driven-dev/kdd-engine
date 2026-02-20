@@ -2,7 +2,8 @@
 
 ---
 id: ADR-0001
-status: accepted
+status: superseded
+superseded_note: "Migración a TypeScript/Bun (Feb 2026). El nuevo stack usa stores in-memory (graphology + brute-force cosine) cargados de ficheros JSON (.kdd-index/). No hay Repository Pattern — los stores se inyectan directamente via container.ts."
 date: 2025-01-16
 deciders: [leopoldo, claude]
 consulted: []

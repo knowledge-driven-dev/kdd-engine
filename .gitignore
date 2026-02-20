@@ -1,63 +1,17 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+# Dependencies
+node_modules/
 
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
+# Build
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
 
-# PyInstaller
-*.manifest
-*.spec
+# Index artifacts
+.kdd-index/
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+# Embedding model cache
+.models/
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-
-# Translations
-*.mo
-*.pot
-
-# Environments
+# Environment
 .env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
 
 # IDE
 .idea/
@@ -66,42 +20,20 @@ venv.bak/
 *.swo
 *~
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# ruff
-.ruff_cache/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pyenv
-.python-version
-
-# Local development
-*.local
-*.log
-logs/
-
-# Database
-*.db
-*.sqlite3
-
-# Docker
-docker-compose.override.yml
-
 # OS
 .DS_Store
 Thumbs.db
 
-# Project specific
-.kdd-index/
-/data/
-/uploads/
-/exports/
-*.bak
+# Logs
+*.log
 
-# obsidian
+# Python (legacy)
+.venv/
+*.db
+*.db.settings
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Obsidian
 .obsidian/

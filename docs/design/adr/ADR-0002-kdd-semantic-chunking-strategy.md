@@ -2,7 +2,8 @@
 
 ---
 id: ADR-0002
-status: accepted
+status: superseded
+superseded_note: "Migración a TypeScript/Bun (Feb 2026). El chunking ahora es paragraph-level genérico (src/application/chunking.ts) con selección de secciones embeddables por kind via embeddableSections(). No hay estrategias por tipo — un solo chunkDocument() para todos los kinds."
 date: 2025-01-16
 deciders: [leopoldo, claude]
 consulted: []

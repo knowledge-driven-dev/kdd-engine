@@ -2,7 +2,8 @@
 
 ---
 id: ADR-0004
-status: accepted
+status: superseded
+superseded_note: "Migración a TypeScript/Bun (Feb 2026). MCP server reimplementado en src/mcp.ts usando @modelcontextprotocol/sdk (TS). 7 tools (kdd_search, kdd_find_spec, kdd_related, kdd_impact, kdd_read_section, kdd_list, kdd_stats). Sin CLI fallback ni FastMCP."
 date: 2025-02-07
 deciders: [leopoldo, claude]
 consulted: []

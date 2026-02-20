@@ -6,10 +6,13 @@
 
 | ID | Título | Estado | Fecha | DC Relacionado |
 |----|--------|--------|-------|----------------|
-| [ADR-0001](./ADR-0001-repository-pattern-for-storage-abstraction.md) | Repository Pattern para Abstracción de Almacenamiento | `accepted` | 2025-01-16 | DC-010 |
-| [ADR-0002](./ADR-0002-kdd-semantic-chunking-strategy.md) | Estrategia de Chunking Semántico por Tipo KDD | `accepted` | 2025-01-16 | DC-004 |
-| [ADR-0003](./ADR-0003-entity-extraction-pipeline.md) | Pipeline de Extracción de Entidades Multi-estrategia | `accepted` | 2025-01-16 | DC-003 |
-| [ADR-0004](./ADR-0004-mcp-server-agent-integration.md) | MCP Server para Integración con Agentes de IA | `accepted` | 2025-02-07 | DC-012 |
+| [ADR-0001](./ADR-0001-repository-pattern-for-storage-abstraction.md) | Repository Pattern para Abstracción de Almacenamiento | `superseded` | 2025-01-16 | DC-010 |
+| [ADR-0002](./ADR-0002-kdd-semantic-chunking-strategy.md) | Estrategia de Chunking Semántico por Tipo KDD | `superseded` | 2025-01-16 | DC-004 |
+| [ADR-0003](./ADR-0003-entity-extraction-pipeline.md) | Pipeline de Extracción de Entidades Multi-estrategia | `superseded` | 2025-01-16 | DC-003 |
+| [ADR-0004](./ADR-0004-mcp-server-agent-integration.md) | MCP Server para Integración con Agentes de IA | `superseded` | 2025-02-07 | DC-012 |
+
+> **Nota**: Los ADRs 0001-0004 fueron superseded por la migración a TypeScript/Bun (Feb 2026).
+> La arquitectura actual está documentada en [docs/architecture/kdd-engine.md](../../architecture/kdd-engine.md).
 
 ## Estados
 

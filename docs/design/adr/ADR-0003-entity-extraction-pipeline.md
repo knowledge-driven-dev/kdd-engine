@@ -2,7 +2,8 @@
 
 ---
 id: ADR-0003
-status: accepted
+status: superseded
+superseded_note: "Migración a TypeScript/Bun (Feb 2026). Reemplazado por 16 extractores dedicados por KDDKind (src/application/extractors/kinds/). Cada extractor entiende la estructura de su tipo. No hay pipeline multi-estrategia — un extractor por kind, registrado en ExtractorRegistry."
 date: 2025-01-16
 deciders: [leopoldo, claude]
 consulted: []

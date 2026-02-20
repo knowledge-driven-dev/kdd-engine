@@ -17,6 +17,10 @@
 | [DC-009](./DC-009-incremental-updates.md) | Actualización Incremental | `open` | Media | - |
 | [DC-010](./DC-010-engine-abstraction.md) | Abstracción de Motores | `decided` | Alta | [ADR-0001](../adr/ADR-0001-repository-pattern-for-storage-abstraction.md) |
 | [DC-011](./DC-011-content-lifecycle.md) | Ciclo de Vida del Contenido | `open` | Alta | - |
+| [DC-012](./DC-012-agent-tool-integration.md) | Integración con Agentes (MCP) | `decided` | Alta | [ADR-0004](../adr/ADR-0004-mcp-server-agent-integration.md) |
+
+> **Nota**: En Feb 2026 se migró de Python a TypeScript/Bun. Los DCs `decided` tienen ADRs ahora marcados como `superseded`.
+> La arquitectura actual: [docs/architecture/kdd-engine.md](../../architecture/kdd-engine.md).
 
 ## Estados
 
