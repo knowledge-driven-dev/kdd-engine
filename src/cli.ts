@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 /**
  * kdd CLI — TypeScript/Bun implementation.
  *

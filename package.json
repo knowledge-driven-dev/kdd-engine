@@ -1,9 +1,12 @@
 {
-  "name": "kdd",
+  "name": "kdd-engine",
   "version": "1.0.0",
   "module": "src/cli.ts",
   "type": "module",
-  "private": true,
+  "bin": {
+    "kdd": "src/cli.ts",
+    "kdd-mcp": "src/mcp.ts"
+  },
   "scripts": {
     "start": "bun run src/cli.ts",
     "bench": "bun run bench/compare.ts",

@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 /**
  * MCP server — exposes KDD search tools.
  *
