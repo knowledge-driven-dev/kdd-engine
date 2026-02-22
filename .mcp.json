@@ -1,8 +1,12 @@
 {
   "mcpServers": {
     "kdd-engine": {
-      "command": ".venv/bin/python",
-      "args": ["-m", "kdd_engine.mcp_server"]
+      "command": "bun",
+      "args": ["run", "packages/mcp/src/mcp.ts"],
+      "env": {
+        "KDD_INDEX_PATH": ".kdd-index",
+        "KDD_SPECS_PATH": "specs"
+      }
     }
   }
 }

@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { GraphStore } from "../src/infra/graph-store.ts";
-import { orphanEdgesQuery } from "../src/application/queries/orphan-edges-query.ts";
-import type { GraphEdge, GraphNode } from "../src/domain/types.ts";
+import { GraphStore, orphanEdgesQuery } from "@kdd/core";
+import type { GraphEdge, GraphNode } from "@kdd/core";
 
 function makeNode(id: string, overrides?: Partial<GraphNode>): GraphNode {
   return {

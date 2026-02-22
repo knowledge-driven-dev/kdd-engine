@@ -15,19 +15,19 @@ install:
 	bun install
 
 index:
-	bun run src/cli.ts index specs/
+	bun run packages/cli/src/cli.ts index specs/
 
 search:
-	bun run src/cli.ts search --index-path .kdd-index "$(q)"
+	bun run packages/cli/src/cli.ts search --index-path .kdd-index "$(q)"
 
 test:
 	bun test
 
 typecheck:
-	bunx tsc --noEmit
+	bunx tsc --build
 
 mcp:
-	bun run src/mcp.ts
+	bun run packages/mcp/src/mcp.ts
 
 clean:
 	rm -rf node_modules .kdd-index

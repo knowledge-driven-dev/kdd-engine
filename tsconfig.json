@@ -18,5 +18,11 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
-  }
+  },
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/cli" },
+    { "path": "packages/mcp" }
+  ],
+  "files": []
 }

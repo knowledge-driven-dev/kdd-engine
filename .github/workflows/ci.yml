@@ -21,7 +21,7 @@ jobs:
         run: bun install
 
       - name: Type check
-        run: bunx tsc --noEmit
+        run: bunx tsc --build
 
   test:
     runs-on: ubuntu-latest

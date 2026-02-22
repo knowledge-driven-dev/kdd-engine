@@ -4,20 +4,43 @@
   "workspaces": {
     "": {
       "name": "kdd",
+      "devDependencies": {
+        "@kdd/core": "workspace:*",
+        "@types/bun": "latest",
+        "typescript": "^5",
+      },
+    },
+    "packages/cli": {
+      "name": "@kdd/cli",
+      "version": "1.0.0",
+      "bin": {
+        "kdd": "src/cli.ts",
+      },
+      "dependencies": {
+        "@kdd/core": "workspace:*",
+        "citty": "^0.2.1",
+      },
+    },
+    "packages/core": {
+      "name": "@kdd/core",
+      "version": "1.0.0",
       "dependencies": {
         "@huggingface/transformers": "^3.8.1",
-        "@modelcontextprotocol/sdk": "^1.0.0",
-        "citty": "^0.2.1",
         "graphology": "^0.26.0",
         "graphology-traversal": "^0.3.1",
         "graphology-types": "^0.24.8",
         "gray-matter": "^4.0.3",
       },
-      "devDependencies": {
-        "@types/bun": "latest",
+    },
+    "packages/mcp": {
+      "name": "@kdd/mcp",
+      "version": "1.0.0",
+      "bin": {
+        "kdd-mcp": "src/mcp.ts",
       },
-      "peerDependencies": {
-        "typescript": "^5",
+      "dependencies": {
+        "@kdd/core": "workspace:*",
+        "@modelcontextprotocol/sdk": "^1.0.0",
       },
     },
   },
@@ -81,6 +104,12 @@
     "@img/sharp-win32-x64": ["@img/sharp-win32-x64@0.34.5", "", { "os": "win32", "cpu": "x64" }, "sha512-+29YMsqY2/9eFEiW93eqWnuLcWcufowXewwSNIT6UwZdUUCrM3oFjMWH/Z6/TMmb4hlFenmfAVbpWeup2jryCw=="],
 
     "@isaacs/fs-minipass": ["@isaacs/fs-minipass@4.0.1", "", { "dependencies": { "minipass": "^7.0.4" } }, "sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w=="],
+
+    "@kdd/cli": ["@kdd/cli@workspace:packages/cli"],
+
+    "@kdd/core": ["@kdd/core@workspace:packages/core"],
+
+    "@kdd/mcp": ["@kdd/mcp@workspace:packages/mcp"],
 
     "@modelcontextprotocol/sdk": ["@modelcontextprotocol/sdk@1.26.0", "", { "dependencies": { "@hono/node-server": "^1.19.9", "ajv": "^8.17.1", "ajv-formats": "^3.0.1", "content-type": "^1.0.5", "cors": "^2.8.5", "cross-spawn": "^7.0.5", "eventsource": "^3.0.2", "eventsource-parser": "^3.0.0", "express": "^5.2.1", "express-rate-limit": "^8.2.1", "hono": "^4.11.4", "jose": "^6.1.3", "json-schema-typed": "^8.0.2", "pkce-challenge": "^5.0.0", "raw-body": "^3.0.0", "zod": "^3.25 || ^4.0", "zod-to-json-schema": "^3.25.1" }, "peerDependencies": { "@cfworker/json-schema": "^4.1.1" }, "optionalPeers": ["@cfworker/json-schema"] }, "sha512-Y5RmPncpiDtTXDbLKswIJzTqu2hyBKxTNsgKqKclDbhIgg1wgtf1fRuvxgTnRfcnxtvvgbIEcqUOzZrJ6iSReg=="],
 

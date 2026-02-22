@@ -8,21 +8,26 @@
 import { defineCommand, runMain } from "citty";
 import { resolve } from "node:path";
 import { Glob } from "bun";
-import { createContainer } from "./container.ts";
-import { hybridSearch } from "./application/queries/hybrid-search.ts";
-import { graphQuery } from "./application/queries/graph-query.ts";
-import { impactQuery } from "./application/queries/impact-query.ts";
-import { semanticQuery } from "./application/queries/semantic-query.ts";
-import { coverageQuery } from "./application/queries/coverage-query.ts";
-import { violationsQuery } from "./application/queries/violations-query.ts";
-import { orphanEdgesQuery } from "./application/queries/orphan-edges-query.ts";
-import { contextQuery } from "./application/queries/context-query.ts";
-import { indexDocument } from "./application/commands/index-document.ts";
-import { createDefaultRegistry } from "./application/extractors/registry.ts";
-import { ArtifactWriter } from "./infra/artifact-writer.ts";
-import { createEncoder } from "./infra/embedding-model.ts";
-import { detectIndexLevel } from "./domain/rules.ts";
-import { IndexLevel, type KDDKind, type KDDLayer, type Manifest } from "./domain/types.ts";
+import {
+  createContainer,
+  hybridSearch,
+  graphQuery,
+  impactQuery,
+  semanticQuery,
+  coverageQuery,
+  violationsQuery,
+  orphanEdgesQuery,
+  contextQuery,
+  indexDocument,
+  createDefaultRegistry,
+  ArtifactWriter,
+  createEncoder,
+  detectIndexLevel,
+  IndexLevel,
+  type KDDKind,
+  type KDDLayer,
+  type Manifest,
+} from "@kdd/core";
 
 // ── Index command ───────────────────────────────────────────────────
 

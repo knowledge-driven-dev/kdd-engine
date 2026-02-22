@@ -13,12 +13,15 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { resolve } from "node:path";
-import { createContainer, type Container } from "./container.ts";
-import { hybridSearch } from "./application/queries/hybrid-search.ts";
-import { graphQuery } from "./application/queries/graph-query.ts";
-import { impactQuery } from "./application/queries/impact-query.ts";
-import { contextQuery } from "./application/queries/context-query.ts";
-import type { KDDKind } from "./domain/types.ts";
+import {
+  createContainer,
+  type Container,
+  hybridSearch,
+  graphQuery,
+  impactQuery,
+  contextQuery,
+  type KDDKind,
+} from "@kdd/core";
 
 const INDEX_PATH = resolve(process.env.KDD_INDEX_PATH ?? ".kdd-index");
 const SPECS_PATH = resolve(process.env.KDD_SPECS_PATH ?? "specs");

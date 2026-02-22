@@ -3,10 +3,7 @@
  */
 
 import { resolve } from "node:path";
-import { createContainer } from "../src/container.ts";
-import { hybridSearch } from "../src/application/queries/hybrid-search.ts";
-import { graphQuery } from "../src/application/queries/graph-query.ts";
-import { impactQuery } from "../src/application/queries/impact-query.ts";
+import { createContainer, hybridSearch, graphQuery, impactQuery } from "@kdd/core";
 
 const INDEX_PATH = resolve(import.meta.dir, "../.kdd-index");
 const QUERIES = [

@@ -1,0 +1,13 @@
+{
+  "name": "@kdd/core",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@huggingface/transformers": "^3.8.1",
+    "graphology": "^0.26.0",
+    "graphology-traversal": "^0.3.1",
+    "graphology-types": "^0.24.8",
+    "gray-matter": "^4.0.3"
+  }
+}

@@ -44,10 +44,10 @@ bun install
 
 ```bash
 # Indexar todas las specs (grafo + embeddings)
-bun run src/cli.ts index specs/
+bun run packages/cli/src/cli.ts index specs/
 
 # Solo grafo (sin embeddings, más rápido)
-bun run src/cli.ts index specs/ --level L1
+bun run packages/cli/src/cli.ts index specs/ --level L1
 ```
 
 El primer `index` con nivel L2 descargará el modelo de embeddings (`all-mpnet-base-v2`, ~440MB). Los datos se almacenan en `.kdd-index/`.
@@ -56,41 +56,41 @@ El primer `index` con nivel L2 descargará el modelo de embeddings (`all-mpnet-b
 
 ```bash
 # Búsqueda híbrida (semántica + grafo + lexical)
-bun run src/cli.ts search --index-path .kdd-index "impact analysis"
+bun run packages/cli/src/cli.ts search --index-path .kdd-index "impact analysis"
 
 # Filtrar por kind
-bun run src/cli.ts search --index-path .kdd-index "authentication" --kind entity,command
+bun run packages/cli/src/cli.ts search --index-path .kdd-index "authentication" --kind entity,command
 
 # Sin embeddings (solo grafo + lexical)
-bun run src/cli.ts search --index-path .kdd-index "pedido" --no-embeddings
+bun run packages/cli/src/cli.ts search --index-path .kdd-index "pedido" --no-embeddings
 ```
 
 ### Explorar
 
 ```bash
 # Traversal del grafo desde un nodo
-bun run src/cli.ts graph --index-path .kdd-index "Entity:KDDDocument"
+bun run packages/cli/src/cli.ts graph --index-path .kdd-index "Entity:KDDDocument"
 
 # Análisis de impacto (reverse BFS)
-bun run src/cli.ts impact --index-path .kdd-index "Entity:KDDDocument"
+bun run packages/cli/src/cli.ts impact --index-path .kdd-index "Entity:KDDDocument"
 
 # Búsqueda semántica pura
-bun run src/cli.ts semantic --index-path .kdd-index "retrieval query"
+bun run packages/cli/src/cli.ts semantic --index-path .kdd-index "retrieval query"
 
 # Cobertura de gobernanza
-bun run src/cli.ts coverage --index-path .kdd-index "Entity:KDDDocument"
+bun run packages/cli/src/cli.ts coverage --index-path .kdd-index "Entity:KDDDocument"
 
 # Violaciones de dependencia entre capas
-bun run src/cli.ts violations --index-path .kdd-index
+bun run packages/cli/src/cli.ts violations --index-path .kdd-index
 ```
 
 ### MCP Server (para agentes)
 
 ```bash
-bun run src/mcp.ts
+bun run packages/mcp/src/mcp.ts
 ```
 
-Expone 7 tools MCP: `kdd_search`, `kdd_find_spec`, `kdd_related`, `kdd_impact`, `kdd_read_section`, `kdd_list`, `kdd_stats`.
+Expone 8 tools MCP: `kdd_search`, `kdd_find_spec`, `kdd_related`, `kdd_impact`, `kdd_context`, `kdd_read_section`, `kdd_list`, `kdd_stats`.
 
 Variables de entorno opcionales:
 - `KDD_INDEX_PATH` — ruta al índice (default: `.kdd-index`)
@@ -98,50 +98,47 @@ Variables de entorno opcionales:
 
 ## Estructura del Proyecto
 
+Monorepo con Bun workspaces — 3 paquetes:
+
 ```
 kdd-engine/
-├── specs/                          # 52 spec files KDD (sin cambios)
-├── src/
-│   ├── domain/
-│   │   ├── types.ts                # Enums, interfaces, modelos
-│   │   └── rules.ts                # BR-DOCUMENT-001, BR-EMBEDDING-001, BR-LAYER-001
-│   ├── application/
-│   │   ├── extractors/
-│   │   │   ├── base.ts             # Helpers: makeNodeId, buildWikiLinkEdges, etc.
-│   │   │   ├── registry.ts         # ExtractorRegistry (16 extractors)
-│   │   │   └── kinds/              # Un extractor por KDDKind
-│   │   ├── commands/
-│   │   │   └── index-document.ts   # CMD-001: read → parse → extract → embed → write
-│   │   ├── queries/
-│   │   │   ├── hybrid-search.ts    # QRY-003: semántica + grafo + lexical
-│   │   │   ├── graph-query.ts      # QRY-001: BFS traversal
-│   │   │   ├── impact-query.ts     # QRY-004: reverse BFS
-│   │   │   ├── semantic-query.ts   # QRY-002: vector puro
-│   │   │   ├── coverage-query.ts   # QRY-005: gobernanza
-│   │   │   └── violations-query.ts # QRY-006: violaciones de capa
-│   │   └── chunking.ts             # BR-EMBEDDING-001 paragraph chunking
-│   ├── infra/
-│   │   ├── artifact-loader.ts      # Lee .kdd-index/
-│   │   ├── artifact-writer.ts      # Escribe .kdd-index/
-│   │   ├── graph-store.ts          # graphology wrapper (BFS, text search)
-│   │   ├── vector-store.ts         # Brute-force cosine similarity
-│   │   ├── embedding-model.ts      # @huggingface/transformers wrapper
-│   │   ├── markdown-parser.ts      # Frontmatter + secciones
-│   │   └── wiki-links.ts           # [[Target]] extraction
-│   ├── container.ts                # DI wiring
-│   ├── cli.ts                      # CLI (7 subcommands)
-│   └── mcp.ts                      # MCP server (7 tools)
-├── tests/                          # bun:test
-├── bench/                          # Benchmarks
-├── docs/                           # ADRs y diseño
-├── package.json
-├── tsconfig.json
+├── specs/                              # 52 spec files KDD (sin cambios)
+├── packages/
+│   ├── core/                           # @kdd/core — librería principal
+│   │   └── src/
+│   │       ├── index.ts                # Barrel export (API pública)
+│   │       ├── domain/
+│   │       │   ├── types.ts            # Enums, interfaces, modelos
+│   │       │   └── rules.ts            # BR-DOCUMENT-001, BR-EMBEDDING-001, BR-LAYER-001
+│   │       ├── application/
+│   │       │   ├── extractors/         # ExtractorRegistry (16 extractors)
+│   │       │   ├── commands/           # CMD-001: read → parse → extract → embed → write
+│   │       │   ├── queries/            # QRY-001..008: graph, hybrid, semantic, impact, etc.
+│   │       │   └── chunking.ts         # BR-EMBEDDING-001 paragraph chunking
+│   │       ├── infra/
+│   │       │   ├── artifact-loader.ts  # Lee .kdd-index/
+│   │       │   ├── artifact-writer.ts  # Escribe .kdd-index/
+│   │       │   ├── graph-store.ts      # graphology wrapper (BFS, text search)
+│   │       │   ├── vector-store.ts     # Brute-force cosine similarity
+│   │       │   ├── embedding-model.ts  # @huggingface/transformers wrapper
+│   │       │   ├── markdown-parser.ts  # Frontmatter + secciones
+│   │       │   └── wiki-links.ts       # [[Target]] extraction
+│   │       └── container.ts            # DI wiring
+│   ├── cli/                            # @kdd/cli — CLI (9 subcommands)
+│   │   └── src/cli.ts
+│   └── mcp/                            # @kdd/mcp — MCP server (8 tools)
+│       └── src/mcp.ts
+├── tests/                              # bun:test
+├── bench/                              # Benchmarks
+├── docs/                               # ADRs y diseño
+├── package.json                        # Workspace root
+├── tsconfig.json                       # Base config + project references
 └── Makefile
 ```
 
 ## 16 KDDKind Types
 
-Cada kind tiene un extractor dedicado en `src/application/extractors/kinds/`:
+Cada kind tiene un extractor dedicado en `packages/core/src/application/extractors/kinds/`:
 
 | Kind | Layer | Ejemplo de ID |
 |------|-------|---------------|
@@ -182,7 +179,7 @@ make install     # bun install
 make index       # Indexar specs/
 make search q=.. # Búsqueda híbrida
 make test        # bun test
-make typecheck   # tsc --noEmit
+make typecheck   # tsc --build
 make mcp         # Iniciar MCP server
 make clean       # Limpiar node_modules y .kdd-index
 ```

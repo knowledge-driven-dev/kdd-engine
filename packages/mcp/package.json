@@ -1,0 +1,10 @@
+{
+  "name": "@kdd/mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": { "kdd-mcp": "src/mcp.ts" },
+  "dependencies": {
+    "@kdd/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}

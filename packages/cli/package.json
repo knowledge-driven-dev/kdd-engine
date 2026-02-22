@@ -1,0 +1,10 @@
+{
+  "name": "@kdd/cli",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": { "kdd": "src/cli.ts" },
+  "dependencies": {
+    "@kdd/core": "workspace:*",
+    "citty": "^0.2.1"
+  }
+}
