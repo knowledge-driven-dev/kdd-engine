@@ -1,4 +1,74 @@
-# KDD Toolkit
+# kdd-engine
+
+Semantic indexing and retrieval engine for [KDD (Knowledge-Driven Development)](https://github.com/knowledge-driven-dev/kdd) specifications. Indexes spec artifacts and provides hybrid search (semantic + graph + lexical) to feed agent context.
+
+---
+
+## Adoption: Enabling RAG for Your Project's Specs
+
+Add semantic search to any project with KDD specs in 3 steps:
+
+### Step 1 — Index your specs
+
+```bash
+# From your project root (requires kdd-engine installed)
+kdd-engine index ./specs
+# or: bun run /path/to/kdd-engine/packages/cli/src/cli.ts index ./specs
+```
+
+This generates `.kdd-index/` with the knowledge graph and embeddings.
+
+> First run downloads the embedding model (~440MB). Subsequent runs are fast.
+
+### Step 2 — Start the MCP server
+
+```bash
+kdd-engine serve
+# or explicitly:
+KDD_SPECS_PATH=./specs KDD_INDEX_PATH=./.kdd-index bun run /path/to/kdd-engine/packages/mcp/src/mcp.ts
+```
+
+### Step 3 — Configure Claude Code
+
+In your project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "kdd": {
+      "command": "bun",
+      "args": ["/path/to/kdd-engine/packages/mcp/src/mcp.ts"],
+      "env": {
+        "KDD_SPECS_PATH": "./specs",
+        "KDD_INDEX_PATH": "./.kdd-index"
+      }
+    }
+  }
+}
+```
+
+Claude Code gains 8 MCP tools: `kdd_search`, `kdd_find_spec`, `kdd_related`, `kdd_impact`, `kdd_context`, `kdd_read_section`, `kdd_list`, `kdd_stats`.
+
+---
+
+## The KDD Ecosystem
+
+```
+┌─────────────────┐  ┌──────────────────┐  ┌────────────────────────┐
+│   kdd-specs     │  │   kdd-tools      │  │   kdd-engine           │
+│                 │  │                  │  │                        │
+│  Layer struct.  │  │  Skills, rules,  │  │  Indexes /specs and    │
+│  Templates      │  │  commands and    │  │  serves semantic       │
+│  kdd.md ref     │  │  validator for   │  │  search via MCP to     │
+│                 │  │  Claude Code     │  │  agent context         │
+└─────────────────┘  └──────────────────┘  └────────────────────────┘
+```
+
+kdd-engine is optional but recommended for projects with >20 spec files.
+
+---
+
+## Concepto
 
 Motor de indexación y retrieval para especificaciones KDD (Knowledge-Driven Development). Indexa artefactos de dominio y ofrece búsqueda híbrida (semántica + grafo + lexical) para agentes de IA.
 
