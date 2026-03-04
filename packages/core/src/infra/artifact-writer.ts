@@ -4,7 +4,7 @@
 
 import { join } from "node:path";
 import { mkdir } from "node:fs/promises";
-import type { Embedding, GraphEdge, GraphNode, Manifest } from "../domain/types.ts";
+import type { Embedding, EmbeddingMeta, GraphEdge, GraphNode, Manifest } from "../domain/types.ts";
 
 export class ArtifactWriter {
   constructor(private indexPath: string) {}
@@ -52,8 +52,18 @@ export class ArtifactWriter {
       const [kind, docId] = key.split("/", 2) as [string, string];
       const dir = join(this.indexPath, "embeddings", kind);
       await mkdir(dir, { recursive: true });
-      const path = join(dir, `${docId}.json`);
-      await Bun.write(path, JSON.stringify(docEmbeddings, null, 2));
+
+      // Metadata JSON (without vector)
+      const meta: EmbeddingMeta[] = docEmbeddings.map(({ vector: _, ...rest }) => rest);
+      await Bun.write(join(dir, `${docId}.json`), JSON.stringify(meta, null, 2));
+
+      // Binary vectors (contiguous Float32Array)
+      const dims = docEmbeddings[0]!.dimensions;
+      const buf = new Float32Array(docEmbeddings.length * dims);
+      for (let i = 0; i < docEmbeddings.length; i++) {
+        buf.set(docEmbeddings[i]!.vector, i * dims);
+      }
+      await Bun.write(join(dir, `${docId}.f32`), buf);
     }
   }
 
@@ -76,15 +86,17 @@ export class ArtifactWriter {
       }
     } catch { /* nodes dir may not exist */ }
 
-    // Delete embeddings
+    // Delete embeddings (.json + .f32)
     const embDir = join(this.indexPath, "embeddings");
     try {
       const kinds = await readdir(embDir);
       for (const kind of kinds) {
-        const path = join(embDir, kind, `${documentId}.json`);
-        const file = Bun.file(path);
-        if (await file.exists()) {
-          await unlink(path);
+        for (const ext of [".json", ".f32"]) {
+          const path = join(embDir, kind, `${documentId}${ext}`);
+          const file = Bun.file(path);
+          if (await file.exists()) {
+            await unlink(path);
+          }
         }
       }
     } catch { /* embeddings dir may not exist */ }

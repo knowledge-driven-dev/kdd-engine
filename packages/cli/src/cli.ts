@@ -119,6 +119,7 @@ const indexCmd = defineCommand({
       kdd_version: "1.0.0",
       embedding_model: modelName ?? null,
       embedding_dimensions: modelDimensions ?? null,
+      ...(indexLevel !== IndexLevel.L1 && { embedding_format: "json+f32" as const }),
       indexed_at: new Date().toISOString(),
       indexed_by: "kdd-ts",
       structure: "flat",

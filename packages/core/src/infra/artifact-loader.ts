@@ -4,7 +4,7 @@
 
 import { join } from "node:path";
 import { Glob } from "bun";
-import type { Embedding, GraphEdge, GraphNode, Manifest } from "../domain/types.ts";
+import type { Embedding, EmbeddingMeta, GraphEdge, GraphNode, Manifest } from "../domain/types.ts";
 
 export async function loadManifest(indexPath: string): Promise<Manifest> {
   return Bun.file(join(indexPath, "manifest.json")).json();
@@ -43,9 +43,26 @@ export async function loadAllEmbeddings(indexPath: string): Promise<Embedding[]>
   const glob = new Glob("**/*.json");
   const embeddings: Embedding[] = [];
 
-  for await (const path of glob.scan({ cwd: embDir, absolute: true })) {
-    const chunks: Embedding[] = await Bun.file(path).json();
-    embeddings.push(...chunks);
+  for await (const jsonPath of glob.scan({ cwd: embDir, absolute: true })) {
+    const items: (Embedding | EmbeddingMeta)[] = await Bun.file(jsonPath).json();
+    if (items.length === 0) continue;
+
+    // Auto-detect format: legacy JSON has "vector" field, new format does not
+    if ("vector" in items[0]!) {
+      embeddings.push(...(items as Embedding[]));
+    } else {
+      // Read companion .f32 binary
+      const f32Path = jsonPath.replace(/\.json$/, ".f32");
+      const buf = await Bun.file(f32Path).arrayBuffer();
+      const floats = new Float32Array(buf);
+      const meta = items as EmbeddingMeta[];
+      const dims = meta[0]!.dimensions;
+
+      for (let i = 0; i < meta.length; i++) {
+        const vector = Array.from(floats.subarray(i * dims, (i + 1) * dims));
+        embeddings.push({ ...meta[i]!, vector });
+      }
+    }
   }
 
   return embeddings;

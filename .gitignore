@@ -5,9 +5,6 @@ node_modules/
 dist/
 *.tsbuildinfo
 
-# Index artifacts
-.kdd-index/
-
 # Embedding model cache
 .models/
 

@@ -130,11 +130,14 @@ export interface Embedding {
   generated_at: string;
 }
 
+export type EmbeddingMeta = Omit<Embedding, "vector">;
+
 export interface Manifest {
   version: string;
   kdd_version: string;
   embedding_model: string | null;
   embedding_dimensions: number | null;
+  embedding_format?: "json" | "json+f32";
   indexed_at: string;
   indexed_by: string;
   structure: string;

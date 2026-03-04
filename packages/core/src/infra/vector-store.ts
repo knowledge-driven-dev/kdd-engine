@@ -6,11 +6,11 @@ import type { Embedding } from "../domain/types.ts";
 
 export class VectorStore {
   private ids: string[] = [];
-  private vectors: Float64Array[] = [];
+  private vectors: Float32Array[] = [];
 
   load(embeddings: Embedding[]): void {
     this.ids = embeddings.map((e) => e.id);
-    this.vectors = embeddings.map((e) => new Float64Array(e.vector));
+    this.vectors = embeddings.map((e) => new Float32Array(e.vector));
   }
 
   search(
@@ -20,7 +20,7 @@ export class VectorStore {
   ): Array<[string, number]> {
     if (this.ids.length === 0) return [];
 
-    const qv = new Float64Array(queryVector);
+    const qv = new Float32Array(queryVector);
     const qNorm = norm(qv);
     if (qNorm === 0) return [];
 
@@ -43,7 +43,7 @@ export class VectorStore {
   }
 }
 
-function dot(a: Float64Array, b: Float64Array): number {
+function dot(a: Float32Array, b: Float32Array): number {
   let sum = 0;
   for (let i = 0; i < a.length; i++) {
     sum += a[i]! * b[i]!;
@@ -51,7 +51,7 @@ function dot(a: Float64Array, b: Float64Array): number {
   return sum;
 }
 
-function norm(a: Float64Array): number {
+function norm(a: Float32Array): number {
   let sum = 0;
   for (let i = 0; i < a.length; i++) {
     sum += a[i]! * a[i]!;
