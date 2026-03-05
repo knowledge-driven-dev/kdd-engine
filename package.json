@@ -2,6 +2,9 @@
   "name": "kdd-engine-monorepo",
   "private": true,
   "workspaces": ["packages/*"],
+  "bin": {
+    "kdd-engine": "packages/cli/src/cli.ts"
+  },
   "scripts": {
     "test": "bun test",
     "typecheck": "bunx tsc --build",

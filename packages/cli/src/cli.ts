@@ -384,7 +384,7 @@ function extractHints(firstHint: string): string[] {
 // ── Main ────────────────────────────────────────────────────────────
 
 const main = defineCommand({
-  meta: { name: "kdd", version: "1.0.0", description: "KDD specification toolkit (TypeScript/Bun)" },
+  meta: { name: "kdd-engine", version: "1.0.0", description: "KDD specification toolkit (TypeScript/Bun)" },
   subCommands: {
     index: indexCmd,
     search: searchCmd,
